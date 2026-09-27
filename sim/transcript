@@ -1,52 +1,18 @@
-# vsim -do {do debug_probe4.do} -c tb_uart_rx 
+# vsim -do {run -all; quit -f} -c tb_uart_rx 
 # Loading work.tb_uart_rx
 # Loading work.uart_rx
-# do debug_probe4.do 
+# run -all 
 # [152650000] OK: rx_data=0x55 framing_error=0
 # [312650000] OK: rx_data=0xa5 framing_error=0
 # [472650000] OK: rx_data=0x00 framing_error=0
 # [632650000] OK: rx_data=0xff framing_error=0
 # [792650000] OK: rx_data=0x3c framing_error=0
 # [952650000] OK: rx_data=0x81 framing_error=1
-# 0
-# t=959000000 st=01 os=0110 bi=111 rx=0 s0=0 s1=0 
-# t=960000000 st=01 os=0111 bi=111 rx=0 s0=0 s1=0 
-# t=961000000 st=10 os=0000 bi=000 rx=1 s0=1 s1=0 
-# t=962000000 st=10 os=0001 bi=000 rx=1 s0=1 s1=1 
-# t=963000000 st=10 os=0010 bi=000 rx=1 s0=1 s1=1 
-# t=964000000 st=10 os=0011 bi=000 rx=1 s0=1 s1=1 
-# t=965000000 st=10 os=0100 bi=000 rx=1 s0=1 s1=1 
-# t=966000000 st=10 os=0101 bi=000 rx=1 s0=1 s1=1 
-# t=967000000 st=10 os=0110 bi=000 rx=1 s0=1 s1=1 
-# t=968000000 st=10 os=0111 bi=000 rx=1 s0=1 s1=1 
-# t=969000000 st=10 os=1000 bi=000 rx=1 s0=1 s1=1 
-# t=970000000 st=10 os=1001 bi=000 rx=1 s0=1 s1=1 
-# t=971000000 st=10 os=1010 bi=000 rx=1 s0=1 s1=1 
-# t=972000000 st=10 os=1011 bi=000 rx=1 s0=1 s1=1 
-# t=973000000 st=10 os=1100 bi=000 rx=1 s0=1 s1=1 
-# t=974000000 st=10 os=1101 bi=000 rx=1 s0=1 s1=1 
-# t=975000000 st=10 os=1110 bi=000 rx=1 s0=1 s1=1 
-# t=976000000 st=10 os=1111 bi=000 rx=1 s0=1 s1=1 
-# [976850000] OK: glitch correctly rejected, no rx_done
-# t=977000000 st=10 os=0000 bi=001 rx=0 s0=0 s1=1 
-# t=978000000 st=10 os=0001 bi=001 rx=0 s0=0 s1=0 
-# t=979000000 st=10 os=0010 bi=001 rx=0 s0=0 s1=0 
-# t=980000000 st=10 os=0011 bi=001 rx=0 s0=0 s1=0 
-# t=981000000 st=10 os=0100 bi=001 rx=0 s0=0 s1=0 
-# t=982000000 st=10 os=0101 bi=001 rx=0 s0=0 s1=0 
-# t=983000000 st=10 os=0110 bi=001 rx=0 s0=0 s1=0 
-# t=984000000 st=10 os=0111 bi=001 rx=0 s0=0 s1=0 
-# t=985000000 st=10 os=1000 bi=001 rx=0 s0=0 s1=0 
-# t=986000000 st=10 os=1001 bi=001 rx=0 s0=0 s1=0 
-# t=987000000 st=10 os=1010 bi=001 rx=0 s0=0 s1=0 
-# t=988000000 st=10 os=1011 bi=001 rx=0 s0=0 s1=0 
-# t=989000000 st=10 os=1100 bi=001 rx=0 s0=0 s1=0 
-# t=990000000 st=10 os=1101 bi=001 rx=0 s0=0 s1=0 
-# t=991000000 st=10 os=1110 bi=001 rx=0 s0=0 s1=0 
-# t=992000000 st=10 os=1111 bi=001 rx=0 s0=0 s1=0 
-# t=993000000 st=10 os=0000 bi=010 rx=0 s0=0 s1=0 
-# t=994000000 st=10 os=0001 bi=010 rx=0 s0=0 s1=0 
-# t=995000000 st=10 os=0010 bi=010 rx=0 s0=0 s1=0 
-# t=996000000 st=10 os=0011 bi=010 rx=0 s0=0 s1=0 
-# t=997000000 st=10 os=0100 bi=010 rx=0 s0=0 s1=0 
-# t=998000000 st=10 os=0101 bi=010 rx=0 s0=0 s1=0 
+# [992850000] OK: glitch correctly rejected, no rx_done
+# [1144650000] OK: rx_data=0x5a framing_error=0
+# --------------------------------------------------
+# uart_rx tb summary: sent=7 frames_ok=7 errors=0
+#   RESULT: PASS
+# --------------------------------------------------
+# ** Note: $finish    : ../tb/tb_uart_rx.v(185)
+#    Time: 1153050 ns  Iteration: 1  Instance: /tb_uart_rx

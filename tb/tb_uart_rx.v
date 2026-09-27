@@ -92,6 +92,15 @@ module tb_uart_rx;
     // send a full 8N1 frame; stop_val lets us deliberately corrupt the stop
     // bit to exercise framing_error. Also records what we expect to see on
     // rx_done into the scoreboard queue.
+    //
+    // uart_rx samples (and transitions STOP->IDLE) at the MIDPOINT of the
+    // stop bit, not at its end. If we held a bad stop bit low for the full
+    // OVERSAMPLE ticks, the DUT would return to IDLE while our line is
+    // *still* low for the second half of that same period -- and IDLE
+    // re-arms on any low level, misreading that leftover low half as a
+    // brand-new start bit (a phantom frame that then eats everything sent
+    // afterwards). So for a bad stop bit we only hold it low past the
+    // sample point, then release high for the remainder of the bit period.
     task send_frame(input [7:0] b, input stop_val);
         integer i;
         begin
@@ -101,8 +110,15 @@ module tb_uart_rx;
 
             send_bit(1'b0);           // start bit
             for (i = 0; i < 8; i = i + 1) send_bit(b[i]);  // data, LSB first
-            send_bit(stop_val);       // stop bit
-            rx = 1'b1;                // back to idle
+
+            if (stop_val === 1'b1) begin
+                send_bit(1'b1);        // normal stop bit
+            end else begin
+                rx = 1'b0;
+                repeat (OVERSAMPLE / 2 + 2) wait_rx_tick;  // past the sample point
+                rx = 1'b1;
+                repeat (OVERSAMPLE / 2 - 2) wait_rx_tick;  // finish out the bit period high
+            end
         end
     endtask
 
@@ -128,6 +144,15 @@ module tb_uart_rx;
 
         // --- bad stop bit -> framing_error expected, data still recovered ---
         send_frame(8'h81, 1'b0);
+
+        // let the line sit at a genuinely stable idle level for a full bit
+        // period before the glitch test below -- send_frame() ends with
+        // rx = 1'b1, but that's a single blocking assignment with zero
+        // duration; without this wait, the glitch pulse would butt directly
+        // up against the previous frame's (deliberately low) stop bit and
+        // the two would merge into one long low pulse instead of looking
+        // like "stable idle, then a brief glitch"
+        repeat (OVERSAMPLE * TICK_PERIOD) @(posedge clk);
 
         // --- glitch rejection: a low pulse much shorter than half a bit
         // period should NOT be mistaken for a start bit ---
