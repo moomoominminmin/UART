@@ -28,6 +28,8 @@ FIFO 스타일의 `wr_en` / `rd_en` / `full` / `empty` 핸드셰이크만으로 
 | [rtl/uart_rx.v](../rtl/uart_rx.v) | 수신기 FSM (2-FF 동기화기 포함) |
 | [rtl/sync_fifo.v](../rtl/sync_fifo.v) | 범용 동기 FIFO |
 | [tb/tb_baud_gen.v](../tb/tb_baud_gen.v) | baud_gen 단위 테스트 |
+| [tb/tb_uart_tx.v](../tb/tb_uart_tx.v) | uart_tx 단독(단위) 테스트. tick을 자체 생성해 baud_gen 없이 검증 |
+| [tb/tb_uart_rx.v](../tb/tb_uart_rx.v) | uart_rx 단독(단위) 테스트. tick/rx 라인을 자체 생성해 baud_gen/uart_tx 없이 검증 |
 | [tb/tb_uart_loopback.v](../tb/tb_uart_loopback.v) | uart_tx → uart_rx 직접 루프백 테스트 |
 | [tb/tb_uart_top.v](../tb/tb_uart_top.v) | uart_top 통합 테스트 (FIFO 포함 루프백, backpressure) |
 
@@ -160,7 +162,9 @@ tx       ───────────────┐  ┌──────
 
 ### 5.3 `uart_rx` — 수신기
 
-**입력 동기화**: `rx`는 비동기 입력이므로 2-FF 동기화기(`rx_sync0` → `rx_sync1`)를 거침. 리셋 값은 `1`(idle).
+**입력 동기화**: `rx`는 `clk`와 무관한 비동기 입력이므로, setup/hold 위반으로 인한 **메타스테이블(metastability)** 위험이 있음.
+`rx_sync0`(비동기 신호를 직접 받아 메타스테이블에 빠질 수 있는 희생 플롭) → `rx_sync1`(한 클럭 더 기다려 값이 안정된 뒤에만 사용)의
+2-FF 동기화기를 거쳐, FSM은 반드시 `rx_sync1`만 참조함. 리셋 값은 `1`(idle).
 
 FSM: `IDLE → START → DATA(×8) → STOP → IDLE`
 
@@ -232,6 +236,8 @@ cd sim
 vlib work
 vlog ../rtl/*.v ../tb/*.v
 vsim -c -do "run -all; quit -f" work.tb_baud_gen
+vsim -c -do "run -all; quit -f" work.tb_uart_tx
+vsim -c -do "run -all; quit -f" work.tb_uart_rx
 vsim -c -do "run -all; quit -f" work.tb_uart_loopback
 vsim -c -do "run -all; quit -f" work.tb_uart_top
 ```
@@ -246,14 +252,20 @@ ModelSim ALTERA STARTER EDITION 10.1d (Quartus 13.0sp1)에서 현재 RTL로 실�
 | 테스트벤치 | 검증 내용 | 결과 |
 |---|---|---|
 | `tb_baud_gen` | `rx_tick` 주기 = `RX_DIV`, `tx_tick` 주기 = `RX_DIV*16`, `tx_tick` 1주기당 `rx_tick` 16개 | PASS |
+| `tb_uart_tx` | `uart_tx` 단독. idle=1, start bit=0, data 8bit(LSB first) 순서/값, stop bit=1, `tx_busy`/`tx_done` 타이밍, 백투백(연속) 전송 | PASS (7/7 byte) |
+| `tb_uart_rx` | `uart_rx` 단독. 정상 프레임 5종 수신, 고의로 stop bit를 깨뜨린 `framing_error` 발생 케이스, start bit 미만 글리치 거부, 글리치 이후 정상 프레임 복구 | PASS (7/7 frame) |
 | `tb_uart_loopback` | `uart_tx` → `uart_rx` 직결, 0x55 / 0xA5 / 0x00 / 0xFF / 0x3C 송수신 일치, framing error 없음 | PASS (5/5) |
 | `tb_uart_top` | ① FIFO 포함 루프백 4바이트 순서/값 일치 ② 연속 write 시 `tx_full` assert 및 수락된 바이트 전부 순서대로 수신 ③ 전 구간 framing error 없음 | PASS (errors=0) |
+
+`tb_uart_rx`의 `framing_error` 테스트를 만들면서 발견한 점: `uart_rx`의 `STOP` 상태는 stop bit의 **끝이 아니라 중앙**에서 샘플링하고 곧바로 `IDLE`로 복귀한다 (5.3 참고).
+따라서 테스트벤치가 "깨진 stop bit"를 재현하려고 stop bit 구간 전체(16틱)를 계속 `0`으로 유지하면, `IDLE`로 돌아간 직후에도 라인이 여전히 낮은 상태라서
+그 나머지 절반을 새로운 start bit로 오인해 버리는 "phantom frame"이 발생한다 (DUT 버그 아님, 테스트 자극 자체가 실제로는 벌어지지 않을 파형이었음).
+그래서 `send_frame`의 bad-stop 경로는 stop bit를 **샘플링 지점을 살짝 지날 만큼만** `0`으로 유지하고, 같은 비트 구간의 나머지는 다시 `1`로 돌려놓도록 작성했다.
 
 ### 8.3 아직 검증되지 않은 항목
 
 - `rx_overrun` 발생 (tb_uart_top 헤더 주석에는 있으나 실제 테스트는 미구현)
-- `framing_error` **발생** 케이스 (stop bit = 0 주입)
-- start bit 글리치 거부
 - TX/RX 보레이트가 서로 다른 경우(오차 허용 범위) 수신
 - 프레임 도중 리셋
 - 기본 파라미터(50 MHz / 115200)에서의 시뮬레이션
+- 연속된 framing error(stop bit 위반 프레임 바로 뒤에 또 다른 프레임)가 이어지는 경우
