@@ -1,38 +1,17 @@
-# vsim -do {run -all; quit} -c work.tb_uart_top 
-# Loading work.tb_uart_top
-# Loading work.uart_top
-# Loading work.baud_gen
-# Loading work.sync_fifo
+# vsim -do {run -all; quit -f} -c tb_uart_tx 
+# Loading work.tb_uart_tx
 # Loading work.uart_tx
-# Loading work.uart_rx
 # run -all 
-# ---- test 1: basic loopback ----
-# [1015500000] OK: popped 0x10
-# [1975500000] OK: popped 0x11
-# [2935500000] OK: popped 0x12
-# [3895500000] OK: popped 0x13
-# ---- test 2: tx_full backpressure ----
-# [3918000000] OK: tx_full asserted under back-to-back writes (accepted 17 bytes)
-# [4855500000] OK: popped 0x40
-# [5815500000] OK: popped 0x41
-# [6775500000] OK: popped 0x42
-# [7735500000] OK: popped 0x43
-# [8695500000] OK: popped 0x44
-# [9655500000] OK: popped 0x45
-# [10615500000] OK: popped 0x46
-# [11575500000] OK: popped 0x47
-# [12535500000] OK: popped 0x48
-# [13495500000] OK: popped 0x49
-# [14455500000] OK: popped 0x4a
-# [15415500000] OK: popped 0x4b
-# [16375500000] OK: popped 0x4c
-# [17335500000] OK: popped 0x4d
-# [18295500000] OK: popped 0x4e
-# [19255500000] OK: popped 0x4f
-# [20215500000] OK: popped 0x50
+# [20551000] OK: sent/decoded 0x55
+# [40551000] OK: sent/decoded 0xa5
+# [60551000] OK: sent/decoded 0x00
+# [80551000] OK: sent/decoded 0xff
+# [100551000] OK: sent/decoded 0x3c
+# [120551000] OK: sent/decoded 0x81
+# [140551000] OK: sent/decoded 0x7e
 # --------------------------------------------------
-# uart_top tb summary: errors=0
+# uart_tx tb summary: sent=7 errors=0
 #   RESULT: PASS
 # --------------------------------------------------
-# ** Note: $finish    : ../tb/tb_uart_top.v(173)
-#    Time: 20215500 ns  Iteration: 1  Instance: /tb_uart_top
+# ** Note: $finish    : ../tb/tb_uart_tx.v(168)
+#    Time: 140551 ns  Iteration: 0  Instance: /tb_uart_tx

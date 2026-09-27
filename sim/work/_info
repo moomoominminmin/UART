@@ -4,7 +4,6 @@ K3
 cModel Technology
 Z0 dC:\UART\sim
 vbaud_gen
-!i10b 1
 Z1 !s100 3[i[;91XM8aKAeZhTV^U:0
 Z2 II72CVdH`4][AJdW@^Go6L2
 Z3 Vd^PeW;BAgd@42QYlZF>^C3
@@ -15,15 +14,15 @@ Z7 F../rtl/baud_gen.v
 L0 6
 Z8 OV;L;10.1d;51
 r1
-!s85 0
 31
 Z9 !s108 1790147052.145000
 Z10 !s107 ../tb/tb_uart_top.v|../rtl/uart_top.v|../rtl/sync_fifo.v|../rtl/uart_rx.v|../rtl/uart_tx.v|../rtl/baud_gen.v|
 Z11 !s90 ../rtl/baud_gen.v|../rtl/uart_tx.v|../rtl/uart_rx.v|../rtl/sync_fifo.v|../rtl/uart_top.v|../tb/tb_uart_top.v|
-!s101 -O0
 o-O0
-vsync_fifo
 !i10b 1
+!s85 0
+!s101 -O0
+vsync_fifo
 Z12 !s100 o1IzATDo]cgiicEohU?5E2
 Z13 I6gL1nm?CNZ2=[[mJdFjWW2
 Z14 VdT94XUZ0K]=S83C;IX1Xb0
@@ -34,13 +33,14 @@ Z17 F../rtl/sync_fifo.v
 L0 7
 R8
 r1
-!s85 0
 31
 R9
 R10
 R11
-!s101 -O0
 o-O0
+!i10b 1
+!s85 0
+!s101 -O0
 vtb_baud_gen
 Z18 IAPI<z;^c6<PoFef`3CWhF0
 Z19 VPcP9`SliPFzAh`O`EOA[n1
@@ -80,78 +80,97 @@ o-O0
 !s85 0
 !s101 -O0
 vtb_uart_top
-!i10b 1
-!s100 ZJ`d0[4a11oM0^zIH;Nl90
-I22GKnXP:9I6gZFkORh`2a3
-Z36 VWUVXZnAZ4fz<mDE6H_OTE2
+Z36 I22GKnXP:9I6gZFkORh`2a3
+Z37 VWUVXZnAZ4fz<mDE6H_OTE2
 R4
-w1790147045
-Z37 8../tb/tb_uart_top.v
-Z38 F../tb/tb_uart_top.v
+Z38 w1790147045
+Z39 8../tb/tb_uart_top.v
+Z40 F../tb/tb_uart_top.v
 L0 8
 R8
 r1
-!s85 0
 31
 R9
 R10
 R11
+o-O0
+Z41 !s100 ZJ`d0[4a11oM0^zIH;Nl90
+!i10b 1
+!s85 0
+!s101 -O0
+vtb_uart_tx
+!i10b 1
+!s100 AP8DMSkAQDSIE^2C0n9]k0
+IZdEH8@k_fdbWF:EH;mzVl2
+Z42 VD]fNG@l2YCnISb53_MB<:1
+R4
+w1790505746
+Z43 8../tb/tb_uart_tx.v
+Z44 F../tb/tb_uart_tx.v
+L0 9
+R8
+r1
+!s85 0
+31
+Z45 !s108 1790505751.913000
+Z46 !s107 ../tb/tb_uart_tx.v|../rtl/uart_tx.v|
+Z47 !s90 ../rtl/uart_tx.v|../tb/tb_uart_tx.v|
 !s101 -O0
 o-O0
 vuart_rx
-!i10b 1
-Z39 !s100 2KIT<1KzNCRn4ZZOW=c;P2
-Z40 ITE:GAGQ<CN;BZ_Y<LPbbS1
-Z41 V`3CiWdRA]>X;MnM`=GoZS1
+Z48 !s100 2KIT<1KzNCRn4ZZOW=c;P2
+Z49 ITE:GAGQ<CN;BZ_Y<LPbbS1
+Z50 V`3CiWdRA]>X;MnM`=GoZS1
 R4
-Z42 w1790141018
-Z43 8../rtl/uart_rx.v
-Z44 F../rtl/uart_rx.v
+Z51 w1790141018
+Z52 8../rtl/uart_rx.v
+Z53 F../rtl/uart_rx.v
 L0 6
 R8
 r1
-!s85 0
 31
 R9
 R10
 R11
-!s101 -O0
 o-O0
+!i10b 1
+!s85 0
+!s101 -O0
 vuart_top
-!i10b 1
-Z45 !s100 KjWXC=TKdAJ152j4mPn`n2
-Z46 I25Y=XOK_1A8AT60LcE3L61
-Z47 V<?5kjNY;;i<:hRGU5U5@Y2
+Z54 !s100 KjWXC=TKdAJ152j4mPn`n2
+Z55 I25Y=XOK_1A8AT60LcE3L61
+Z56 V<?5kjNY;;i<:hRGU5U5@Y2
 R4
-Z48 w1790146248
-Z49 8../rtl/uart_top.v
-Z50 F../rtl/uart_top.v
+Z57 w1790146248
+Z58 8../rtl/uart_top.v
+Z59 F../rtl/uart_top.v
 L0 6
 R8
 r1
-!s85 0
 31
 R9
 R10
 R11
-!s101 -O0
 o-O0
+!i10b 1
+!s85 0
+!s101 -O0
 vuart_tx
 !i10b 1
-Z51 !s100 =2ecF=POCJbbbzN9P=NoS0
-Z52 I=NSlC`5;I467D4ozOZSY[1
-Z53 V>T?hB;3W48fLaT=YjbiGz0
+Z60 !s100 =2ecF=POCJbbbzN9P=NoS0
+Z61 I=NSlC`5;I467D4ozOZSY[1
+Z62 V>T?hB;3W48fLaT=YjbiGz0
 R4
-Z54 w1790140886
-Z55 8../rtl/uart_tx.v
-Z56 F../rtl/uart_tx.v
+Z63 w1790140886
+Z64 8../rtl/uart_tx.v
+Z65 F../rtl/uart_tx.v
 L0 5
 R8
 r1
 !s85 0
 31
-R9
-R10
-R11
+R45
+R46
+R47
 !s101 -O0
 o-O0
