@@ -1,0 +1,28 @@
+Reading C:/altera/13.0sp1/modelsim_ase/tcl/vsim/pref.tcl 
+
+# 10.1d
+
+# vsim -do {do debug_probe2.do} -c tb_uart_rx 
+# Loading work.tb_uart_rx
+# Loading work.uart_rx
+# do debug_probe2.do 
+# [152650000] OK: rx_data=0x55 framing_error=0
+# [312650000] OK: rx_data=0xa5 framing_error=0
+# [472650000] OK: rx_data=0x00 framing_error=0
+# [632650000] OK: rx_data=0xff framing_error=0
+# [792650000] OK: rx_data=0x3c framing_error=0
+# [952650000] OK: rx_data=0x81 framing_error=1
+# 0
+# [976850000] OK: glitch correctly rejected, no rx_done
+# ** Error: bad field specifier "t"
+# Error in macro ./debug_probe2.do line 7
+# bad field specifier "t"
+#     while executing
+# "format "t=%0t st=%b os=%b bi=%b rx=%b s1=%b done=%b data=%b ferr=%b" $now [examine -radix binary /tb_uart_rx/dut/state] [examine -radix binary /tb_uar..."
+#     ("while" body line 3)
+#     invoked from within
+# "while {$i < 21} {
+#   run 10000ns
+#   echo [format "t=%0t st=%b os=%b bi=%b rx=%b s1=%b done=%b data=%b ferr=%b" $now [examine -radix binary /tb_uart_rx/d..."
+VSIM 2> # 
+# <EOF> 

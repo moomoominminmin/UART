@@ -1,0 +1,39 @@
+Reading C:/altera/13.0sp1/modelsim_ase/tcl/vsim/pref.tcl 
+
+# 10.1d
+
+# vsim -do {do debug_probe3.do} -c tb_uart_rx 
+# Loading work.tb_uart_rx
+# Loading work.uart_rx
+# do debug_probe3.do 
+# [152650000] OK: rx_data=0x55 framing_error=0
+# [312650000] OK: rx_data=0xa5 framing_error=0
+# [472650000] OK: rx_data=0x00 framing_error=0
+# [632650000] OK: rx_data=0xff framing_error=0
+# [792650000] OK: rx_data=0x3c framing_error=0
+# [952650000] OK: rx_data=0x81 framing_error=1
+# 0
+# [976850000] OK: glitch correctly rejected, no rx_done
+# t=980000000 st=10 os=0011 bi=001 rx=0 s1=0 done=St0 data=10000001 
+# t=990000000 st=10 os=1101 bi=001 rx=0 s1=0 done=St0 data=10000001 
+# t=1000000000 st=10 os=0111 bi=010 rx=0 s1=0 done=St0 data=10000001 
+# t=1010000000 st=10 os=0001 bi=011 rx=1 s1=1 done=St0 data=10000001 
+# t=1020000000 st=10 os=1011 bi=011 rx=1 s1=1 done=St0 data=10000001 
+# t=1030000000 st=10 os=0101 bi=100 rx=0 s1=0 done=St0 data=10001001 
+# t=1040000000 st=10 os=1111 bi=100 rx=0 s1=0 done=St0 data=10001001 
+# t=1050000000 st=10 os=1001 bi=101 rx=1 s1=1 done=St0 data=10001001 
+# t=1060000000 st=10 os=0011 bi=110 rx=1 s1=1 done=St0 data=10101001 
+# t=1070000000 st=10 os=1101 bi=110 rx=1 s1=1 done=St0 data=10101001 
+# t=1080000000 st=10 os=0111 bi=111 rx=0 s1=0 done=St0 data=11101001 
+# t=1090000000 st=11 os=0001 bi=111 rx=1 s1=1 done=St0 data=01101001 
+# t=1100000000 st=11 os=1011 bi=111 rx=1 s1=1 done=St0 data=01101001 
+# [1104650000] ERROR: rx_data = 0x69, expected 0x5a
+# t=1110000000 st=01 os=0101 bi=111 rx=0 s1=0 done=St0 data=01101001 
+# t=1120000000 st=10 os=0111 bi=000 rx=0 s1=0 done=St0 data=01101001 
+# t=1130000000 st=10 os=0001 bi=001 rx=1 s1=1 done=St0 data=01101001 
+# --------------------------------------------------
+# uart_rx tb summary: sent=7 frames_ok=6 errors=1
+#   RESULT: FAIL
+# --------------------------------------------------
+# ** Note: $finish    : ../tb/tb_uart_rx.v(160)
+#    Time: 1137050 ns  Iteration: 1  Instance: /tb_uart_rx

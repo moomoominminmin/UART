@@ -1,3 +1,7 @@
+Reading C:/altera/13.0sp1/modelsim_ase/tcl/vsim/pref.tcl 
+
+# 10.1d
+
 # vsim -do {do debug_probe4.do} -c tb_uart_rx 
 # Loading work.tb_uart_rx
 # Loading work.uart_rx
