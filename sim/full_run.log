@@ -1,0 +1,41 @@
+Reading C:/altera/13.0sp1/modelsim_ase/tcl/vsim/pref.tcl 
+
+# 10.1d
+
+# vsim -do {run -all; quit} -c work.tb_uart_top 
+# Loading work.tb_uart_top
+# Loading work.uart_top
+# Loading work.baud_gen
+# Loading work.sync_fifo
+# Loading work.uart_tx
+# Loading work.uart_rx
+# run -all 
+# ---- test 1: basic loopback ----
+# [1015500000] OK: popped 0x10
+# [1017500000] ERROR: popped 0xxx, expected 0x11
+# [1975500000] ERROR: popped 0x11, expected 0x12
+# [1977500000] ERROR: popped 0xxx, expected 0x13
+# ---- test 2: tx_full backpressure ----
+# [1994500000] OK: tx_full asserted as expected
+# [2935500000] ERROR: popped 0x12, expected 0x40
+# [2937500000] ERROR: popped 0xxx, expected 0x41
+# [3895500000] ERROR: popped 0x13, expected 0x42
+# [3897500000] ERROR: popped 0xxx, expected 0x43
+# [4855500000] ERROR: popped 0x40, expected 0x44
+# [4857500000] ERROR: popped 0xxx, expected 0x45
+# [5815500000] ERROR: popped 0x41, expected 0x46
+# [5817500000] ERROR: popped 0xxx, expected 0x47
+# [6775500000] ERROR: popped 0x42, expected 0x48
+# [6777500000] ERROR: popped 0xxx, expected 0x49
+# [7735500000] ERROR: popped 0x43, expected 0x4a
+# [7737500000] ERROR: popped 0xxx, expected 0x4b
+# [8695500000] ERROR: popped 0x44, expected 0x4c
+# [8697500000] ERROR: popped 0xxx, expected 0x4d
+# [9655500000] ERROR: popped 0x45, expected 0x4e
+# [9657500000] ERROR: popped 0xxx, expected 0x4f
+# --------------------------------------------------
+# uart_top tb summary: errors=19
+#   RESULT: FAIL
+# --------------------------------------------------
+# ** Note: $finish    : ../tb/tb_uart_top.v(140)
+#    Time: 9657500 ns  Iteration: 1  Instance: /tb_uart_top

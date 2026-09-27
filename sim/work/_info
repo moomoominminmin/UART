@@ -1,0 +1,157 @@
+m255
+K3
+13
+cModel Technology
+Z0 dC:\UART\sim
+vbaud_gen
+!i10b 1
+Z1 !s100 3[i[;91XM8aKAeZhTV^U:0
+Z2 II72CVdH`4][AJdW@^Go6L2
+Z3 Vd^PeW;BAgd@42QYlZF>^C3
+Z4 dC:\UART\sim
+Z5 w1790139785
+Z6 8../rtl/baud_gen.v
+Z7 F../rtl/baud_gen.v
+L0 6
+Z8 OV;L;10.1d;51
+r1
+!s85 0
+31
+Z9 !s108 1790147052.145000
+Z10 !s107 ../tb/tb_uart_top.v|../rtl/uart_top.v|../rtl/sync_fifo.v|../rtl/uart_rx.v|../rtl/uart_tx.v|../rtl/baud_gen.v|
+Z11 !s90 ../rtl/baud_gen.v|../rtl/uart_tx.v|../rtl/uart_rx.v|../rtl/sync_fifo.v|../rtl/uart_top.v|../tb/tb_uart_top.v|
+!s101 -O0
+o-O0
+vsync_fifo
+!i10b 1
+Z12 !s100 o1IzATDo]cgiicEohU?5E2
+Z13 I6gL1nm?CNZ2=[[mJdFjWW2
+Z14 VdT94XUZ0K]=S83C;IX1Xb0
+R4
+Z15 w1790146234
+Z16 8../rtl/sync_fifo.v
+Z17 F../rtl/sync_fifo.v
+L0 7
+R8
+r1
+!s85 0
+31
+R9
+R10
+R11
+!s101 -O0
+o-O0
+vtb_baud_gen
+Z18 IAPI<z;^c6<PoFef`3CWhF0
+Z19 VPcP9`SliPFzAh`O`EOA[n1
+R4
+Z20 w1790139791
+Z21 8../tb/tb_baud_gen.v
+Z22 F../tb/tb_baud_gen.v
+L0 7
+R8
+r1
+31
+Z23 !s108 1790140432.706000
+Z24 !s107 ../tb/tb_baud_gen.v|../rtl/baud_gen.v|
+Z25 !s90 ../rtl/baud_gen.v|../tb/tb_baud_gen.v|
+o-O0
+Z26 !s100 kHIE`bCNcZR=3jTGm09Il2
+!i10b 1
+!s85 0
+!s101 -O0
+vtb_uart_loopback
+Z27 !s100 `F]IzIO6g[<>eJB>`=7nh2
+Z28 I:QGjfn8jf4n`LUHn[;cNa2
+Z29 VzTOT7bYX7Zkd<n05_<PP]0
+R4
+Z30 w1790140924
+Z31 8../tb/tb_uart_loopback.v
+Z32 F../tb/tb_uart_loopback.v
+L0 6
+R8
+r1
+31
+Z33 !s108 1790141023.676000
+Z34 !s107 ../tb/tb_uart_loopback.v|../rtl/uart_rx.v|../rtl/uart_tx.v|../rtl/baud_gen.v|
+Z35 !s90 ../rtl/baud_gen.v|../rtl/uart_tx.v|../rtl/uart_rx.v|../tb/tb_uart_loopback.v|
+o-O0
+!i10b 1
+!s85 0
+!s101 -O0
+vtb_uart_top
+!i10b 1
+!s100 ZJ`d0[4a11oM0^zIH;Nl90
+I22GKnXP:9I6gZFkORh`2a3
+Z36 VWUVXZnAZ4fz<mDE6H_OTE2
+R4
+w1790147045
+Z37 8../tb/tb_uart_top.v
+Z38 F../tb/tb_uart_top.v
+L0 8
+R8
+r1
+!s85 0
+31
+R9
+R10
+R11
+!s101 -O0
+o-O0
+vuart_rx
+!i10b 1
+Z39 !s100 2KIT<1KzNCRn4ZZOW=c;P2
+Z40 ITE:GAGQ<CN;BZ_Y<LPbbS1
+Z41 V`3CiWdRA]>X;MnM`=GoZS1
+R4
+Z42 w1790141018
+Z43 8../rtl/uart_rx.v
+Z44 F../rtl/uart_rx.v
+L0 6
+R8
+r1
+!s85 0
+31
+R9
+R10
+R11
+!s101 -O0
+o-O0
+vuart_top
+!i10b 1
+Z45 !s100 KjWXC=TKdAJ152j4mPn`n2
+Z46 I25Y=XOK_1A8AT60LcE3L61
+Z47 V<?5kjNY;;i<:hRGU5U5@Y2
+R4
+Z48 w1790146248
+Z49 8../rtl/uart_top.v
+Z50 F../rtl/uart_top.v
+L0 6
+R8
+r1
+!s85 0
+31
+R9
+R10
+R11
+!s101 -O0
+o-O0
+vuart_tx
+!i10b 1
+Z51 !s100 =2ecF=POCJbbbzN9P=NoS0
+Z52 I=NSlC`5;I467D4ozOZSY[1
+Z53 V>T?hB;3W48fLaT=YjbiGz0
+R4
+Z54 w1790140886
+Z55 8../rtl/uart_tx.v
+Z56 F../rtl/uart_tx.v
+L0 5
+R8
+r1
+!s85 0
+31
+R9
+R10
+R11
+!s101 -O0
+o-O0
