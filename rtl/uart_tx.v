@@ -1,8 +1,12 @@
 `timescale 1ns / 1ps
 
-// UART transmitter, 8N1 (8 data bits, no parity, 1 stop bit)
+// UART transmitter, 8-N-1 by default, or 8-P-1 when PARITY_EN=1
+// (8 data bits, optional parity bit, 1 stop bit)
 // Drives one bit per tx_tick pulse (tx_tick comes from baud_gen, 1x baud rate)
-module uart_tx (
+module uart_tx #(
+    parameter PARITY_EN  = 0,  // 0: no parity bit (legacy 8N1), 1: send a parity bit
+    parameter PARITY_ODD = 0   // 0: even parity, 1: odd parity (only used if PARITY_EN=1)
+) (
     input  wire       clk,
     input  wire       rst_n,
 
@@ -15,14 +19,18 @@ module uart_tx (
     output reg         tx_done     // 1-cycle pulse when the frame finishes
 );
 
-    localparam [1:0] IDLE  = 2'd0,
-                      START = 2'd1,
-                      DATA  = 2'd2,
-                      STOP  = 2'd3;
+    localparam [2:0] IDLE   = 3'd0,
+                      START  = 3'd1,
+                      DATA   = 3'd2,
+                      PARITY = 3'd3,
+                      STOP   = 3'd4;
 
-    reg [1:0] state;
+    reg [2:0] state;
     reg [2:0] bit_idx;
     reg [7:0] data_reg;
+
+    // even parity of data_reg, flipped to odd parity if PARITY_ODD is set
+    wire parity_bit = PARITY_ODD ? ~(^data_reg) : (^data_reg);
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -58,10 +66,18 @@ module uart_tx (
                     if (tx_tick) begin
                         tx <= data_reg[bit_idx];
                         if (bit_idx == 3'd7) begin
-                            state <= STOP;
+                            state <= PARITY_EN ? PARITY : STOP;
                         end else begin
                             bit_idx <= bit_idx + 1'b1;
                         end
+                    end
+                end
+
+                // only entered when PARITY_EN=1
+                PARITY: begin
+                    if (tx_tick) begin
+                        tx    <= parity_bit;
+                        state <= STOP;
                     end
                 end
 

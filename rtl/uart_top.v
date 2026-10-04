@@ -6,7 +6,9 @@
 module uart_top #(
     parameter CLK_FREQ   = 50_000_000,
     parameter BAUD_RATE  = 115200,
-    parameter FIFO_DEPTH = 16
+    parameter FIFO_DEPTH = 16,
+    parameter PARITY_EN  = 0,  // 0: legacy 8N1, 1: add a parity bit (8-P-1)
+    parameter PARITY_ODD = 0   // 0: even parity, 1: odd parity (only used if PARITY_EN=1)
 ) (
     input  wire       clk,
     input  wire       rst_n,
@@ -25,6 +27,7 @@ module uart_top #(
     // status (1-cycle pulses)
     output wire       rx_overrun,     // RX FIFO was full when a new byte arrived (byte dropped)
     output wire       framing_error,  // stop bit was not '1' on the last received byte
+    output wire       parity_error,   // received parity bit didn't match the data (PARITY_EN=1 only)
 
     // serial pins
     output wire       tx,
@@ -68,7 +71,10 @@ module uart_top #(
 
     assign tx_empty = tx_fifo_empty;
 
-    uart_tx u_tx (
+    uart_tx #(
+        .PARITY_EN (PARITY_EN),
+        .PARITY_ODD(PARITY_ODD)
+    ) u_tx (
         .clk     (clk),
         .rst_n   (rst_n),
         .tx_tick (tx_tick),
@@ -85,7 +91,9 @@ module uart_top #(
     wire       rx_fifo_full;
 
     uart_rx #(
-        .OVERSAMPLE(16)
+        .OVERSAMPLE (16),
+        .PARITY_EN  (PARITY_EN),
+        .PARITY_ODD (PARITY_ODD)
     ) u_rx (
         .clk          (clk),
         .rst_n        (rst_n),
@@ -93,7 +101,8 @@ module uart_top #(
         .rx           (rx),
         .rx_data      (rx_data_w),
         .rx_done      (rx_done_w),
-        .framing_error(framing_error)
+        .framing_error(framing_error),
+        .parity_error (parity_error)
     );
 
     sync_fifo #(
