@@ -1,35 +1,38 @@
 `timescale 1ns / 1ps
 
-// UART transmitter, 8-N-1 by default, or 8-P-1 when PARITY_EN=1
-// (8 data bits, optional parity bit, 1 stop bit)
-// Drives one bit per tx_tick pulse (tx_tick comes from baud_gen, 1x baud rate)
+// UART 송신기
+//   기본은 8N1 (start 1 + data 8 + stop 1).
+//   PARITY_EN=1 이면 data 뒤에 패리티 비트가 하나 더 붙는다 (8P1).
+//   tx_tick(1비트 시간마다 1번) 마다 비트를 하나씩 내보낸다.
+//
+//   상태 흐름:  IDLE -> START -> DATA(8번) -> [PARITY] -> STOP -> IDLE
 module uart_tx #(
-    parameter PARITY_EN  = 0,  // 0: no parity bit (legacy 8N1), 1: send a parity bit
-    parameter PARITY_ODD = 0   // 0: even parity, 1: odd parity (only used if PARITY_EN=1)
+    parameter PARITY_EN  = 0,  // 0: 패리티 없음, 1: 패리티 사용
+    parameter PARITY_ODD = 0   // 0: 짝수(even) 패리티, 1: 홀수(odd) 패리티
 ) (
     input  wire       clk,
     input  wire       rst_n,
 
-    input  wire       tx_tick,     // 1 pulse per bit period
-    input  wire       tx_start,    // pulse: latch tx_data and begin sending
+    input  wire       tx_tick,   // 1비트 시간마다 1클럭 펄스
+    input  wire       tx_start,  // 1클럭 펄스: tx_data 를 받아서 전송 시작
     input  wire [7:0] tx_data,
 
-    output reg         tx,         // serial line (idle = 1)
-    output reg         tx_busy,    // high while a frame is in flight
-    output reg         tx_done     // 1-cycle pulse when the frame finishes
+    output reg        tx,        // 시리얼 출력 (쉬는 동안 1)
+    output reg        tx_busy    // 전송 중이면 1
 );
 
     localparam [2:0] IDLE   = 3'd0,
-                      START  = 3'd1,
-                      DATA   = 3'd2,
-                      PARITY = 3'd3,
-                      STOP   = 3'd4;
+                     START  = 3'd1,
+                     DATA   = 3'd2,
+                     PARITY = 3'd3,
+                     STOP   = 3'd4;
 
     reg [2:0] state;
-    reg [2:0] bit_idx;
-    reg [7:0] data_reg;
+    reg [2:0] bit_idx;   // 지금 보내는 데이터 비트 번호 (0 ~ 7)
+    reg [7:0] data_reg;  // 보낼 데이터를 저장해 두는 레지스터
 
-    // even parity of data_reg, flipped to odd parity if PARITY_ODD is set
+    // 짝수 패리티 = 데이터 비트를 전부 XOR 한 값 (1의 개수를 짝수로 맞춰 줌)
+    // 홀수 패리티는 그 값을 뒤집으면 된다.
     wire parity_bit = PARITY_ODD ? ~(^data_reg) : (^data_reg);
 
     always @(posedge clk or negedge rst_n) begin
@@ -37,13 +40,11 @@ module uart_tx #(
             state    <= IDLE;
             tx       <= 1'b1;
             tx_busy  <= 1'b0;
-            tx_done  <= 1'b0;
             bit_idx  <= 3'd0;
             data_reg <= 8'd0;
         end else begin
-            tx_done <= 1'b0;
-
             case (state)
+                // 대기: tx_start 가 오면 데이터를 저장하고 시작
                 IDLE: begin
                     tx <= 1'b1;
                     if (tx_start) begin
@@ -53,7 +54,7 @@ module uart_tx #(
                     end
                 end
 
-                // wait for the next bit-period boundary, then drive the start bit
+                // 다음 tx_tick 에서 start bit(0) 출력
                 START: begin
                     if (tx_tick) begin
                         tx      <= 1'b0;
@@ -62,18 +63,20 @@ module uart_tx #(
                     end
                 end
 
+                // tx_tick 마다 데이터를 LSB(bit0)부터 한 비트씩 출력
                 DATA: begin
                     if (tx_tick) begin
                         tx <= data_reg[bit_idx];
                         if (bit_idx == 3'd7) begin
-                            state <= PARITY_EN ? PARITY : STOP;
+                            if (PARITY_EN) state <= PARITY;
+                            else           state <= STOP;
                         end else begin
                             bit_idx <= bit_idx + 1'b1;
                         end
                     end
                 end
 
-                // only entered when PARITY_EN=1
+                // 패리티 비트 출력 (PARITY_EN=1 일 때만 거쳐감)
                 PARITY: begin
                     if (tx_tick) begin
                         tx    <= parity_bit;
@@ -81,11 +84,11 @@ module uart_tx #(
                     end
                 end
 
+                // stop bit(1) 출력 후 종료
                 STOP: begin
                     if (tx_tick) begin
                         tx      <= 1'b1;
                         tx_busy <= 1'b0;
-                        tx_done <= 1'b1;
                         state   <= IDLE;
                     end
                 end

@@ -1,12 +1,12 @@
 `timescale 1ns / 1ps
 
-// Baud rate generator
-// - tx_tick : pulses once per bit period  (1x baud rate)     -> used by uart_tx
-// - rx_tick : pulses 16x per bit period   (16x oversampling) -> used by uart_rx for mid-bit sampling
+// 보레이트 틱 생성기
+//   rx_tick : 1비트 시간 동안 16번 발생 (16x 오버샘플링, 수신기가 사용)
+//   tx_tick : 1비트 시간마다 1번 발생   (송신기가 사용)
+// 두 틱 모두 1클럭 폭의 펄스이다.
 module baud_gen #(
-    parameter CLK_FREQ    = 50_000_000,
-    parameter BAUD_RATE   = 115200,
-    parameter OVERSAMPLE  = 16
+    parameter CLK_FREQ  = 50_000_000,
+    parameter BAUD_RATE = 115200
 ) (
     input  wire clk,
     input  wire rst_n,
@@ -14,38 +14,31 @@ module baud_gen #(
     output wire rx_tick
 );
 
-    // rx_tick is the fundamental tick (16x baud). tx_tick is derived by counting
-    // OVERSAMPLE rx_ticks, so tx_tick is always EXACTLY 16 rx_ticks apart -
-    // two independent free-running counters would drift apart due to separate
-    // truncation in TX_DIV vs RX_DIV*OVERSAMPLE.
-    localparam integer RX_DIV = CLK_FREQ / (BAUD_RATE * OVERSAMPLE);
+    // 클럭을 몇 번 세면 rx_tick 1번인가?  (50MHz / (115200*16) = 27)
+    localparam integer DIV   = CLK_FREQ / (BAUD_RATE * 16);
+    localparam integer CNT_W = $clog2(DIV);
 
-    localparam integer RX_CNT_W = $clog2(RX_DIV);
-    localparam integer OS_CNT_W = $clog2(OVERSAMPLE);
+    reg [CNT_W-1:0] clk_cnt;  // 0 ~ DIV-1 을 반복해서 센다
+    reg [3:0]       tick_cnt; // rx_tick 을 0 ~ 15 까지 센다
 
-    reg [RX_CNT_W-1:0] rx_cnt;
-    reg [OS_CNT_W-1:0] os_cnt;
+    // rx_tick : clk_cnt 가 마지막 값일 때 1
+    assign rx_tick = (clk_cnt == DIV - 1);
+
+    // tx_tick : 16번째 rx_tick 일 때 1 (즉 rx_tick 16개당 1개)
+    assign tx_tick = rx_tick && (tick_cnt == 4'd15);
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            rx_cnt <= 0;
-        end else if (rx_cnt == RX_DIV - 1) begin
-            rx_cnt <= 0;
+            clk_cnt  <= 0;
+            tick_cnt <= 4'd0;
         end else begin
-            rx_cnt <= rx_cnt + 1'b1;
+            if (rx_tick) begin
+                clk_cnt  <= 0;
+                tick_cnt <= tick_cnt + 1'b1; // 4비트라서 15 다음은 자동으로 0
+            end else begin
+                clk_cnt <= clk_cnt + 1'b1;
+            end
         end
     end
-
-    assign rx_tick = (rx_cnt == RX_DIV - 1);
-
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            os_cnt <= 0;
-        end else if (rx_tick) begin
-            os_cnt <= (os_cnt == OVERSAMPLE - 1) ? 0 : os_cnt + 1'b1;
-        end
-    end
-
-    assign tx_tick = rx_tick && (os_cnt == OVERSAMPLE - 1);
 
 endmodule
