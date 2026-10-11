@@ -10,7 +10,7 @@ module uart_top #(
     parameter CLK_FREQ   = 50_000_000,
     parameter BAUD_RATE  = 115200,
     parameter FIFO_DEPTH = 16,
-    parameter PARITY_EN  = 0,  // 0: 패리티 없음(8N1), 1: 패리티 사용
+    parameter PARITY_EN  = 1,  // 0: 패리티 없음(8N1), 1: 패리티 사용
     parameter PARITY_ODD = 0   // 0: 짝수 패리티, 1: 홀수 패리티
 ) (
     input  wire       clk,

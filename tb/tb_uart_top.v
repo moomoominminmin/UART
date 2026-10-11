@@ -25,7 +25,7 @@ module tb_uart_top;
     // ---------------- 설정 ----------------
     localparam CLK_PERIOD = 20;     // 50MHz -> 20ns
     localparam BIT_NS     = 8680;   // 115200bps 의 1비트 시간 (1e9 / 115200)
-    localparam PARITY_EN  = 0;      // uart_top 기본값과 같게 맞출 것
+    localparam PARITY_EN  = 1;      // uart_top 기본값과 같게 맞출 것
     localparam PARITY_ODD = 0;
 
     // ---------------- 신호 ----------------
@@ -248,6 +248,7 @@ module tb_uart_top;
         expect_byte(8'h11);
         expect_byte(8'h22);
         expect_byte(8'h33);
+        repeat (2) @(negedge clk);              // 마지막 읽기 반영을 기다린 뒤 확인
         check(rx_empty, "RX FIFO empty after reading all");
 
         // ===== 4) 루프백 =====
@@ -304,6 +305,7 @@ module tb_uart_top;
         // FIFO 에는 먼저 온 16개(0~15)만 남아 있어야 한다
         for (i = 0; i < 16; i = i + 1)
             expect_byte(i);
+        repeat (2) @(negedge clk);              // 마지막 읽기 반영을 기다린 뒤 확인
         check(rx_empty, "RX FIFO empty after reading 16 bytes");
         loopback = 0;
 
