@@ -18,7 +18,7 @@ module tb_uart_top_noflag;
     // ---------------- 설정 ----------------
     localparam CLK_PERIOD = 20;     // 50MHz -> 20ns
     localparam BIT_NS     = 8680;   // 115200bps 의 1비트 시간
-    localparam PARITY_EN  = 1;
+    localparam PARITY_EN  = 0;      // 패리티를 뺀 DUT 에 맞춤 (패리티 있는 DUT 면 1)
     localparam PARITY_ODD = 0;
     localparam FRAME_BITS = 10 + PARITY_EN;   // start + data 8 + parity + stop
     localparam FRAME_NS   = BIT_NS * FRAME_BITS;
@@ -42,20 +42,17 @@ module tb_uart_top_noflag;
     wire       rx_pin = loopback ? tx : rx_ext;
 
     // ---------------- 테스트할 모듈 ----------------
-    // tx_empty, rx_empty, parity_error 는 연결하지 않는다.
+    // tx_empty, rx_empty, parity_error 포트는 DUT 에 없다고 보고 아예 쓰지 않는다.
     uart_top dut (                      // <-- 합성 후에는 여기 모듈 이름만 바꾼다
         .clk          (clk),
         .rst_n        (rst_n),
         .wr_en        (wr_en),
         .wr_data      (wr_data),
         .tx_full      (tx_full),
-        .tx_empty     (),
         .rd_en        (rd_en),
         .rd_data      (rd_data),
-        .rx_empty     (),
         .rx_overrun   (rx_overrun),
         .framing_error(framing_error),
-        .parity_error (),
         .tx           (tx),
         .rx           (rx_pin)
     );
