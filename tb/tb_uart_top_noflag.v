@@ -56,7 +56,7 @@ module tb_uart_top_noflag;
         .tx           (tx),
         .rx           (rx_pin)
     );
-
+    
     always #(CLK_PERIOD/2) clk = ~clk;
 
     // ---------------- 에러 플래그 기록 (1클럭 펄스를 기억) ----------------
