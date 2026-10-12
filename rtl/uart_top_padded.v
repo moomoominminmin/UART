@@ -160,4 +160,14 @@ module uart_top_padded (clk, rst_n, wr_en, wr_data, tx_full, tx_empty, rd_en, rd
         .VSS (VSS)
     );
 
+    PVDD u_pad_vdd (
+        .VDD (VDD),
+        .VSS (VSS)
+    );
+
+    PVSS u_pad_vss (
+        .VDD (VDD),
+        .VSS (VSS)
+    );
+
 endmodule

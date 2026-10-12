@@ -1,0 +1,65 @@
+# vsim -do {run -all; quit} -lib C:/Users/yerim/AppData/Local/Temp/wk/work -c tb_uart_top_noflag 
+# Loading C:/Users/yerim/AppData/Local/Temp/wk/work.tb_uart_top_noflag
+# Loading C:/Users/yerim/AppData/Local/Temp/wk/work.uart_top
+# Loading C:/Users/yerim/AppData/Local/Temp/wk/work.baud_gen
+# Loading C:/Users/yerim/AppData/Local/Temp/wk/work.sync_fifo
+# Loading C:/Users/yerim/AppData/Local/Temp/wk/work.uart_tx
+# Loading C:/Users/yerim/AppData/Local/Temp/wk/work.uart_rx
+# run -all 
+# ==== 1) reset ====
+# [200000] OK    : after reset: tx = 1 (idle)
+# [200000] OK    : after reset: TX FIFO not full
+# ==== 2) TX: check waveform on tx pin ====
+# [13070000] OK    : tx start bit = 0
+# [82510000] OK    : tx data bits (LSB first)
+# [91190000] OK    : tx parity bit
+# [99870000] OK    : tx stop bit = 1
+# [108110000] OK    : tx start bit = 0
+# [177550000] OK    : tx data bits (LSB first)
+# [186230000] OK    : tx parity bit
+# [194910000] OK    : tx stop bit = 1
+# ==== 3) RX: drive rx pin directly ====
+# [290500000] OK    : got 0x3c
+# [386080000] OK    : got 0x00
+# [481660000] OK    : got 0xff
+# [768200000] OK    : got 0x11
+# [768240000] OK    : got 0x22
+# [768280000] OK    : got 0x33
+# ==== 4) loopback: tx -> rx ====
+# [1263260000] OK    : got 0x80
+# [1263300000] OK    : got 0x81
+# [1263340000] OK    : got 0x82
+# [1263380000] OK    : got 0x83
+# [1263420000] OK    : got 0x84
+# [1263420000] OK    : no framing_error in normal operation
+# [1263420000] OK    : no rx_overrun in normal operation
+# ==== 5) framing error ====
+# [1359080000] OK    : bad stop bit -> framing_error
+# [1454700000] OK    : got 0x5a
+# [1454700000] OK    : next good frame has no framing_error
+# ==== 6) bad parity frame (parity_error not observed) ====
+# [1550360000] OK    : no framing_error for a parity-only error
+# [1645980000] OK    : got 0xc3
+# ==== 7) overrun ====
+# [3567380000] OK    : RX FIFO full + new byte -> rx_overrun
+# [3567400000] OK    : got 0x00
+# [3567440000] OK    : got 0x01
+# [3567480000] OK    : got 0x02
+# [3567520000] OK    : got 0x03
+# [3567560000] OK    : got 0x04
+# [3567600000] OK    : got 0x05
+# [3567640000] OK    : got 0x06
+# [3567680000] OK    : got 0x07
+# [3567720000] OK    : got 0x08
+# [3567760000] OK    : got 0x09
+# [3567800000] OK    : got 0x0a
+# [3567840000] OK    : got 0x0b
+# [3567880000] OK    : got 0x0c
+# [3567920000] OK    : got 0x0d
+# [3567960000] OK    : got 0x0e
+# [3568000000] OK    : got 0x0f
+# --------------------------------------
+# RESULT: PASS
+# --------------------------------------
+# ** Note: $finish    : tb/tb_uart_top_noflag.v(308)
+#    Time: 3568 us  Iteration: 1  Instance: /tb_uart_top_noflag
