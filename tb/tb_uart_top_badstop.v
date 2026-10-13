@@ -1,10 +1,13 @@
 `timescale 1ns / 1ps
 
-// stop bit 가 깨진 프레임을 받았을 때의 동작 테스트 (framing_error 플래그를 지운 뒤의 확인용)
+// stop bit 가 깨진 프레임 수신 + 송신 테스트 (framing_error 플래그를 지운 뒤의 확인용)
 //
-// framing_error 가 없으므로 "오류를 알려 주는지"가 아니라 아래 두 가지를 확인한다.
+// [RX] framing_error 가 없으므로 "오류를 알려 주는지"가 아니라 아래 두 가지를 확인한다.
 //   1) stop bit 가 0 인 프레임이 와도 수신기가 멈추거나 꼬이지 않고 다음 프레임을 정상 수신한다.
 //   2) stop bit 가 0 이어도 데이터 바이트는 RX FIFO 에 그대로 저장된다. (버려지지 않음)
+// [TX] tx 핀의 파형(start / data LSB first / stop)을 비트 가운데에서 읽어 검사한다.
+//   3) 여러 바이트 송신, 송신과 수신을 동시에 해도 서로 영향이 없는지,
+//      TX FIFO 가 가득 찬 상태(tx_full)에서도 데이터 순서가 지켜지는지 확인한다.
 //
 // 합성 후(netlist) 시뮬레이션에서도 그대로 돌도록 만들었다.
 //   - uart_top 의 "포트"만 사용한다. (내부 신호, 계층 참조 없음)
@@ -141,6 +144,46 @@ module tb_uart_top_badstop;
         end
     endtask
 
+    // ---------------- 송신 쪽 동작 ----------------
+
+    // TX FIFO 에 1바이트 쓰기 (가득 차 있으면 자리가 날 때까지 기다림)
+    task write_byte(input [7:0] d);
+        begin
+            @(negedge clk);
+            while (tx_full) @(negedge clk);
+            wr_data = d;
+            wr_en   = 1;
+            @(negedge clk);
+            wr_en   = 0;
+        end
+    endtask
+
+    // tx 핀의 프레임이 올바른지 검사한다.
+    // start bit 의 하강 에지를 기다린 뒤, 각 비트의 가운데에서 값을 읽는다.
+    task check_tx_frame(input [7:0] expected);
+        integer i;
+        reg [7:0] got;
+        begin
+            @(negedge tx);
+            #(BIT_NS / 2);                  // start bit 가운데
+            check(tx === 1'b0, "tx start bit = 0");
+
+            for (i = 0; i < 8; i = i + 1) begin
+                #(BIT_NS);
+                got[i] = tx;
+            end
+            check(got === expected, "tx data bits (LSB first)");
+
+            #(BIT_NS);
+            check(tx === 1'b1, "tx stop bit = 1");
+        end
+    endtask
+
+    // 쓰기를 하는 동안 tx_full 이 한 번이라도 1 이 됐는지 기록
+    reg saw_full = 0;
+    always @(posedge clk)
+        if (tx_full) saw_full <= 1;
+
     // ---------------- 메인 시나리오 ----------------
     integer i;
 
@@ -207,7 +250,62 @@ module tb_uart_top_badstop;
         expect_byte(8'h81);
 
         // 읽은 개수가 FIFO 깊이(8)를 넘지 않게 중간중간 비웠으므로 overrun 이 나면 안 된다
-        check(!saw_overrun, "no rx_overrun during this test");
+        check(!saw_overrun, "no rx_overrun during RX tests");
+
+        // ===== 8) 송신: tx 핀 파형 =====
+        $display("==== 8) TX: check waveform on tx pin ====");
+        fork
+            write_byte(8'h55);
+            check_tx_frame(8'h55);
+        join
+        fork
+            write_byte(8'hA3);
+            check_tx_frame(8'hA3);
+        join
+        fork
+            write_byte(8'h00);
+            check_tx_frame(8'h00);
+        join
+        fork
+            write_byte(8'hFF);
+            check_tx_frame(8'hFF);
+        join
+
+        // ===== 9) 송신과 수신을 동시에 =====
+        // 송신 도중에 stop bit 가 깨진 프레임이 들어와도 tx 파형은 그대로여야 하고,
+        // 수신도 정상이어야 한다.
+        $display("==== 9) TX and RX at the same time ====");
+        fork
+            begin
+                write_byte(8'hC3);
+                check_tx_frame(8'hC3);
+            end
+            begin
+                send_bad_stop(8'h99, 10);
+                send_good    (8'h66);
+            end
+        join
+        settle;
+        expect_byte(8'h99);
+        expect_byte(8'h66);
+
+        // ===== 10) TX FIFO 가 가득 찬 상태에서도 순서대로 나간다 =====
+        // 12바이트를 쉬지 않고 쓴다. 쓰는 쪽은 tx_full 이 풀릴 때까지 기다리고,
+        // tx 핀에서는 쓴 순서대로 12개의 프레임이 나와야 한다.
+        $display("==== 10) TX FIFO full: order is kept ====");
+        saw_full = 0;
+        fork
+            begin
+                for (i = 0; i < 12; i = i + 1)
+                    write_byte(8'h30 + i);
+            end
+            begin : tx_seq
+                integer k;
+                for (k = 0; k < 12; k = k + 1)
+                    check_tx_frame(8'h30 + k);
+            end
+        join
+        check(saw_full, "tx_full went high while writing fast");
 
         // ===== 결과 =====
         $display("--------------------------------------");

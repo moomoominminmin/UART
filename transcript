@@ -1,16 +1,16 @@
-# vsim -do {run -all; quit} -lib C:/Users/yerim/AppData/Local/Temp/wk10/w -c tb_uart_top_badstop 
-# Loading C:/Users/yerim/AppData/Local/Temp/wk10/w.tb_uart_top_badstop
-# Loading C:/Users/yerim/AppData/Local/Temp/wk10/w.uart_top
-# Loading C:/Users/yerim/AppData/Local/Temp/wk10/w.baud_gen
-# Loading C:/Users/yerim/AppData/Local/Temp/wk10/w.sync_fifo
-# Loading C:/Users/yerim/AppData/Local/Temp/wk10/w.uart_tx
-# Loading C:/Users/yerim/AppData/Local/Temp/wk10/w.uart_rx
-# ** Warning: (vsim-3017) tb/tb_uart_top_badstop.v(52): [TFMPC] - Too few port connections. Expected 12, found 10.
+# vsim -do {run -all; quit} -lib C:/Users/yerim/AppData/Local/Temp/wk12/w -c tb_uart_top_badstop 
+# Loading C:/Users/yerim/AppData/Local/Temp/wk12/w.tb_uart_top_badstop
+# Loading C:/Users/yerim/AppData/Local/Temp/wk12/w.uart_top
+# Loading C:/Users/yerim/AppData/Local/Temp/wk12/w.baud_gen
+# Loading C:/Users/yerim/AppData/Local/Temp/wk12/w.sync_fifo
+# Loading C:/Users/yerim/AppData/Local/Temp/wk12/w.uart_tx
+# Loading C:/Users/yerim/AppData/Local/Temp/wk12/w.uart_rx
+# ** Warning: (vsim-3017) tb/tb_uart_top_badstop.v(55): [TFMPC] - Too few port connections. Expected 12, found 10.
 # 
 #         Region: /tb_uart_top_badstop/dut
-# ** Warning: (vsim-3722) tb/tb_uart_top_badstop.v(52): [TFMPC] - Missing connection for port 'tx_empty'.
+# ** Warning: (vsim-3722) tb/tb_uart_top_badstop.v(55): [TFMPC] - Missing connection for port 'tx_empty'.
 # 
-# ** Warning: (vsim-3722) tb/tb_uart_top_badstop.v(52): [TFMPC] - Missing connection for port 'rx_empty'.
+# ** Warning: (vsim-3722) tb/tb_uart_top_badstop.v(55): [TFMPC] - Missing connection for port 'rx_empty'.
 # 
 # run -all 
 # ==== 1) reset ====
@@ -19,26 +19,83 @@
 # ==== 2) reference: good frame ====
 # [87100000] OK    : got 0x3c
 # ==== 3) bad stop bit: data is still stored ====
-# [174000000] ERROR : got 0xxx, expected 0x77
+# [174000000] OK    : got 0x77
 # ==== 4) good frame after bad stop bit ====
 # [260900000] OK    : got 0x5a
 # ==== 5) bad / good frames back to back ====
-# [781800000] ERROR : got 0x22, expected 0x11
-# [781840000] ERROR : got 0x44, expected 0x22
-# [781880000] ERROR : got 0x66, expected 0x33
-# [781920000] ERROR : got 0xxx, expected 0x44
-# [781960000] ERROR : got 0xxx, expected 0x55
-# [782000000] ERROR : got 0xxx, expected 0x66
+# [781800000] OK    : got 0x11
+# [781840000] OK    : got 0x22
+# [781880000] OK    : got 0x33
+# [781920000] OK    : got 0x44
+# [781960000] OK    : got 0x55
+# [782000000] OK    : got 0x66
 # ==== 6) longer low stop bit, then idle ====
-# [973060000] ERROR : got 0x0f, expected 0xa5
-# [973100000] ERROR : got 0xxx, expected 0x0f
+# [973060000] OK    : got 0xa5
+# [973100000] OK    : got 0x0f
 # ==== 7) data patterns with bad stop bit ====
-# [1233600000] ERROR : got 0x81, expected 0x00
-# [1233640000] ERROR : got 0xxx, expected 0xff
-# [1233680000] ERROR : got 0xxx, expected 0x81
-# [1233680000] OK    : no rx_overrun during this test
+# [1233600000] OK    : got 0x00
+# [1233640000] OK    : got 0xff
+# [1233680000] OK    : got 0x81
+# [1233680000] OK    : no rx_overrun during RX tests
+# ==== 8) TX: check waveform on tx pin ====
+# [1239950000] OK    : tx start bit = 0
+# [1309390000] ERROR : tx data bits (LSB first)
+# [1318070000] OK    : tx stop bit = 1
+# [1326350000] OK    : tx start bit = 0
+# [1395790000] ERROR : tx data bits (LSB first)
+# [1404470000] OK    : tx stop bit = 1
+# [1412750000] OK    : tx start bit = 0
+# [1482190000] ERROR : tx data bits (LSB first)
+# [1490870000] OK    : tx stop bit = 1
+# [1499150000] OK    : tx start bit = 0
+# [1568590000] ERROR : tx data bits (LSB first)
+# [1577270000] OK    : tx stop bit = 1
+# ==== 9) TX and RX at the same time ====
+# [1585550000] OK    : tx start bit = 0
+# [1654990000] ERROR : tx data bits (LSB first)
+# [1663670000] OK    : tx stop bit = 1
+# [1750980000] OK    : got 0x99
+# [1751020000] OK    : got 0x66
+# ==== 10) TX FIFO full: order is kept ====
+# [1758350000] OK    : tx start bit = 0
+# [1827790000] ERROR : tx data bits (LSB first)
+# [1836470000] OK    : tx stop bit = 1
+# [1844750000] OK    : tx start bit = 0
+# [1914190000] ERROR : tx data bits (LSB first)
+# [1922870000] OK    : tx stop bit = 1
+# [1931150000] OK    : tx start bit = 0
+# [2000590000] ERROR : tx data bits (LSB first)
+# [2009270000] OK    : tx stop bit = 1
+# [2017550000] OK    : tx start bit = 0
+# [2086990000] ERROR : tx data bits (LSB first)
+# [2095670000] OK    : tx stop bit = 1
+# [2103950000] OK    : tx start bit = 0
+# [2173390000] ERROR : tx data bits (LSB first)
+# [2182070000] OK    : tx stop bit = 1
+# [2190350000] OK    : tx start bit = 0
+# [2259790000] ERROR : tx data bits (LSB first)
+# [2268470000] OK    : tx stop bit = 1
+# [2276750000] OK    : tx start bit = 0
+# [2346190000] ERROR : tx data bits (LSB first)
+# [2354870000] OK    : tx stop bit = 1
+# [2363150000] OK    : tx start bit = 0
+# [2432590000] ERROR : tx data bits (LSB first)
+# [2441270000] OK    : tx stop bit = 1
+# [2449550000] OK    : tx start bit = 0
+# [2518990000] ERROR : tx data bits (LSB first)
+# [2527670000] OK    : tx stop bit = 1
+# [2535950000] OK    : tx start bit = 0
+# [2605390000] ERROR : tx data bits (LSB first)
+# [2614070000] OK    : tx stop bit = 1
+# [2622350000] OK    : tx start bit = 0
+# [2691790000] ERROR : tx data bits (LSB first)
+# [2700470000] OK    : tx stop bit = 1
+# [2708750000] OK    : tx start bit = 0
+# [2778190000] ERROR : tx data bits (LSB first)
+# [2786870000] OK    : tx stop bit = 1
+# [2786870000] OK    : tx_full went high while writing fast
 # --------------------------------------
-# RESULT: FAIL (errors = 12)
+# RESULT: FAIL (errors = 17)
 # --------------------------------------
-# ** Note: $finish    : tb/tb_uart_top_badstop.v(217)
-#    Time: 1233680 ns  Iteration: 1  Instance: /tb_uart_top_badstop
+# ** Note: $finish    : tb/tb_uart_top_badstop.v(315)
+#    Time: 2786870 ns  Iteration: 0  Instance: /tb_uart_top_badstop
