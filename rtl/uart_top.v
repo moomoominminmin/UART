@@ -9,9 +9,8 @@
 module uart_top #(
     parameter CLK_FREQ   = 50_000_000,
     parameter BAUD_RATE  = 115200,
-    parameter FIFO_DEPTH = 16,
-    parameter PARITY_EN  = 1,  // 0: 패리티 없음(8N1), 1: 패리티 사용
-    parameter PARITY_ODD = 0   // 0: 짝수 패리티, 1: 홀수 패리티
+    parameter TX_FIFO_DEPTH = 2,   // TX FIFO 깊이 (2의 거듭제곱)
+    parameter RX_FIFO_DEPTH = 8    // RX FIFO 깊이 (2의 거듭제곱)
 ) (
     input  wire       clk,
     input  wire       rst_n,        // 비동기 리셋, 0 이면 리셋
@@ -27,10 +26,8 @@ module uart_top #(
     output wire [7:0] rd_data,      // FIFO 맨 앞 데이터 (rx_empty=0 일 때 유효)
     output wire       rx_empty,     // RX FIFO 비어 있음
 
-    // 상태 표시 (모두 1클럭 펄스)
+    // 상태 표시 (1클럭 펄스)
     output wire       rx_overrun,    // RX FIFO 가 가득 찬 상태에서 새 데이터가 와서 버려짐
-    output wire       framing_error, // stop bit 가 1이 아니었음
-    output wire       parity_error,  // 패리티가 틀렸음 (PARITY_EN=1 일 때만)
 
     // 시리얼 핀
     output wire       tx,
@@ -59,7 +56,7 @@ module uart_top #(
 
     sync_fifo #(
         .DATA_WIDTH(8),
-        .DEPTH     (FIFO_DEPTH)
+        .DEPTH     (TX_FIFO_DEPTH)
     ) u_tx_fifo (
         .clk    (clk),
         .rst_n  (rst_n),
@@ -71,10 +68,7 @@ module uart_top #(
         .empty  (tx_empty)
     );
 
-    uart_tx #(
-        .PARITY_EN (PARITY_EN),
-        .PARITY_ODD(PARITY_ODD)
-    ) u_tx (
+    uart_tx u_tx (
         .clk     (clk),
         .rst_n   (rst_n),
         .tx_tick (tx_tick),
@@ -89,24 +83,19 @@ module uart_top #(
     wire       rx_done;
     wire       rx_full;
 
-    uart_rx #(
-        .PARITY_EN (PARITY_EN),
-        .PARITY_ODD(PARITY_ODD)
-    ) u_rx (
+    uart_rx u_rx (
         .clk          (clk),
         .rst_n        (rst_n),
         .rx_tick      (rx_tick),
         .rx           (rx),
         .rx_data      (rx_data),
-        .rx_done      (rx_done),
-        .framing_error(framing_error),
-        .parity_error (parity_error)
+        .rx_done      (rx_done)
     );
 
     // 1바이트를 다 받으면(rx_done) 자동으로 RX FIFO 에 저장
     sync_fifo #(
         .DATA_WIDTH(8),
-        .DEPTH     (FIFO_DEPTH)
+        .DEPTH     (RX_FIFO_DEPTH)
     ) u_rx_fifo (
         .clk    (clk),
         .rst_n  (rst_n),

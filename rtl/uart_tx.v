@@ -1,15 +1,10 @@
 `timescale 1ns / 1ps
 
-// UART 송신기
-//   기본은 8N1 (start 1 + data 8 + stop 1).
-//   PARITY_EN=1 이면 data 뒤에 패리티 비트가 하나 더 붙는다 (8P1).
+// UART 송신기 (8N1: start 1 + data 8 + stop 1)
 //   tx_tick(1비트 시간마다 1번) 마다 비트를 하나씩 내보낸다.
 //
-//   상태 흐름:  IDLE -> START -> DATA(8번) -> [PARITY] -> STOP -> IDLE
-module uart_tx #(
-    parameter PARITY_EN  = 0,  // 0: 패리티 없음, 1: 패리티 사용
-    parameter PARITY_ODD = 0   // 0: 짝수(even) 패리티, 1: 홀수(odd) 패리티
-) (
+//   상태 흐름:  IDLE -> START -> DATA(8번) -> STOP -> IDLE
+module uart_tx (
     input  wire       clk,
     input  wire       rst_n,
 
@@ -21,19 +16,14 @@ module uart_tx #(
     output reg        tx_busy    // 전송 중이면 1
 );
 
-    localparam [2:0] IDLE   = 3'd0,
-                     START  = 3'd1,
-                     DATA   = 3'd2,
-                     PARITY = 3'd3,
-                     STOP   = 3'd4;
+    localparam [1:0] IDLE  = 2'd0,
+                     START = 2'd1,
+                     DATA  = 2'd2,
+                     STOP  = 2'd3;
 
-    reg [2:0] state;
+    reg [1:0] state;
     reg [2:0] bit_idx;   // 지금 보내는 데이터 비트 번호 (0 ~ 7)
     reg [7:0] data_reg;  // 보낼 데이터를 저장해 두는 레지스터
-
-    // 짝수 패리티 = 데이터 비트를 전부 XOR 한 값 (1의 개수를 짝수로 맞춰 줌)
-    // 홀수 패리티는 그 값을 뒤집으면 된다.
-    wire parity_bit = PARITY_ODD ? ~(^data_reg) : (^data_reg);
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -67,20 +57,8 @@ module uart_tx #(
                 DATA: begin
                     if (tx_tick) begin
                         tx <= data_reg[bit_idx];
-                        if (bit_idx == 3'd7) begin
-                            if (PARITY_EN) state <= PARITY;
-                            else           state <= STOP;
-                        end else begin
-                            bit_idx <= bit_idx + 1'b1;
-                        end
-                    end
-                end
-
-                // 패리티 비트 출력 (PARITY_EN=1 일 때만 거쳐감)
-                PARITY: begin
-                    if (tx_tick) begin
-                        tx    <= parity_bit;
-                        state <= STOP;
+                        if (bit_idx == 3'd7) state <= STOP;
+                        else                 bit_idx <= bit_idx + 1'b1;
                     end
                 end
 
