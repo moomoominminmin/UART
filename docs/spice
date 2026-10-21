@@ -1,0 +1,23 @@
+* ===== 전원 전류 저장 =====
+.PROBE TRAN I(VDD)
+
+* ===== 1. search 1회당 에너지 (사이클별) =====
+.MEAS TRAN Q_c1 INTEG I(VDD) FROM=t1 TO=t2
+.MEAS TRAN Q_c2 INTEG I(VDD) FROM=t2 TO=t3
+.MEAS TRAN Q_c3 INTEG I(VDD) FROM=t3 TO=t4
+.MEAS TRAN Q_c4 INTEG I(VDD) FROM=t4 TO=t5
+.MEAS TRAN Q_c5 INTEG I(VDD) FROM=t5 TO=t6
+
+.MEAS TRAN E_c1_hit  PARAM='-Q_c1*3.3'
+.MEAS TRAN E_c2_miss PARAM='-Q_c2*3.3'
+.MEAS TRAN E_c3_hit  PARAM='-Q_c3*3.3'
+.MEAS TRAN E_c4_miss PARAM='-Q_c4*3.3'
+.MEAS TRAN E_c5_miss PARAM='-Q_c5*3.3'
+
+* ===== 2. 평균 전력 (5번 search 전체) =====
+.MEAS TRAN I_avg AVG I(VDD) FROM=t1 TO=t6
+.MEAS TRAN P_avg PARAM='-I_avg*3.3'
+
+* ===== 3. search 지연 (1번째 hit 기준) =====
+.MEAS TRAN t_search TRIG V(TCAM_PULSE) VAL=1.65 RISE=1
++ TARG V(OUT) VAL=1.65 RISE=1
