@@ -29,7 +29,7 @@ module uart_tx #(
     localparam integer CLKS_PER_BIT = CLK_FREQ / BAUD_RATE;
     localparam integer CNT_W        = $clog2(CLKS_PER_BIT);
 
-    reg [CNT_W-1:0] cnt;    // 1비트 시간 안에서 clk 를 세는 카운터 (쉬는 동안은 항상 0)
+    reg [CNT_W-1:0] cnt;    // 1비트 시간 안에서 clk 를 세는 카운터 (쉬는 동안은 매 클럭 0으로 지움)
     reg [10:0]      shreg;  // 보낼 프레임 (반전 저장 + 마커)
 
     wire bit_done  = (cnt == CLKS_PER_BIT - 1);  // 1비트 시간이 끝났다
@@ -39,9 +39,9 @@ module uart_tx #(
     assign tx      = ~shreg[0];
     assign tx_busy = |shreg;
 
+    // shreg 는 곧 상태이자 tx 출력이라 리셋이 필요하다 (리셋 중 tx=1, tx_busy=0)
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            cnt   <= 0;
             shreg <= 11'd0;
         end else if (!tx_busy) begin
             // 대기: tx_start 가 오면 프레임을 통째로 넣는다. 다음 클럭부터 start bit(0) 출력
@@ -49,11 +49,15 @@ module uart_tx #(
                 shreg <= {1'b1, 1'b0, ~tx_data, 1'b1};
         end else if (bit_done) begin
             // 1비트 시간마다 다음 비트로. stop bit 가 끝났으면 비워서 idle 로
-            cnt   <= 0;
             shreg <= last_bit ? 11'd0 : {1'b0, shreg[10:1]};
-        end else begin
-            cnt <= cnt + 1'b1;
         end
+    end
+
+    // cnt 는 리셋 없는 DFF 를 쓴다. (리셋 DFF 보다 작다)
+    // 쉬는 동안 매 클럭 0으로 지우므로, 리셋 중 shreg=0 인 동안 클럭이 돌면 0이 되어 있다.
+    always @(posedge clk) begin
+        if (!tx_busy || bit_done) cnt <= 0;
+        else                      cnt <= cnt + 1'b1;
     end
 
 endmodule
