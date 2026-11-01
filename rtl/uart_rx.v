@@ -1,32 +1,26 @@
 `timescale 1ns / 1ps
 
 // UART 수신기 (8N1: start 1 + data 8 + stop 1)
-//   start bit 의 하강 엣지에서 카운터를 시작해서,
-//   각 비트의 "가운데"에서 값을 읽는다. (가장자리는 신호가 흔들리기 때문)
+//   공용 프리스케일러(uart_tick)의 tick 을 세어서 비트 시간을 잰다. (1비트 = tick 16개)
+//   start bit 의 하강 엣지에서 세기 시작해서, tick 8개(반 비트) 뒤 start bit 가운데를 확인하고,
+//   그 뒤로는 tick 16개마다 각 비트의 "가운데"에서 값을 읽는다.
 //
 //   상태 흐름:  IDLE -> START -> DATA(8번) -> STOP -> IDLE
 //
 //   면적을 줄이기 위해
 //     - rx_done 은 레지스터 없이 (STOP && bit_done) 로 바로 만든다.
-//     - 비교기는 bit_done 하나만 쓴다. (START 에서는 카운터를 중간값부터 시작)
+//     - 비교기는 bit_done 하나만 쓴다. (START 에서는 카운터를 8부터 시작해서 tick 8개만 센다)
 //     - 리셋이 꼭 필요한 state 만 리셋하고, 나머지는 리셋 없는 DFF 를 쓴다. (더 작다)
-module uart_rx #(
-    parameter CLK_FREQ  = 50_000_000,
-    parameter BAUD_RATE = 115200
-) (
+module uart_rx (
     input  wire       clk,
     input  wire       rst_n,
+    input  wire       tick,          // 공용 프리스케일러 tick (1비트 = tick 16개)
 
     input  wire       rx,            // 시리얼 입력 (쉬는 동안 1), clk 와 비동기
 
     output reg  [7:0] rx_data,       // 수신한 데이터 (rx_done 일 때 유효)
     output wire       rx_done        // 1클럭 펄스: 1바이트 수신 완료
 );
-
-    localparam integer CLKS_PER_BIT = CLK_FREQ / BAUD_RATE;
-    localparam integer CNT_W        = $clog2(CLKS_PER_BIT);
-    // START 에서 이 값부터 세면 bit_done 이 "반 비트 시간" 뒤에 뜬다
-    localparam integer HALF_START   = CLKS_PER_BIT - CLKS_PER_BIT / 2;
 
     localparam [1:0] IDLE  = 2'd0,
                      START = 2'd1,
@@ -44,11 +38,11 @@ module uart_rx #(
     end
     // 이후로는 rx 대신 항상 rx_sync1 만 사용한다.
 
-    reg [1:0]       state;
-    reg [CNT_W-1:0] cnt;      // clk 를 세는 카운터
-    reg [2:0]       bit_idx;  // 지금 받는 데이터 비트 번호 (0 ~ 7)
+    reg [1:0] state;
+    reg [3:0] tcnt;     // tick 을 세는 카운터 (0 ~ 15)
+    reg [2:0] bit_idx;  // 지금 받는 데이터 비트 번호 (0 ~ 7)
 
-    wire bit_done = (cnt == CLKS_PER_BIT - 1);  // 1비트 시간이 지났다
+    wire bit_done = tick && (tcnt == 4'd15);  // 15 다음 tick: 정해진 tick 수가 지났다
 
     assign rx_done = (state == STOP) && bit_done;
 
@@ -62,11 +56,11 @@ module uart_rx #(
                 // 대기: rx 가 0으로 떨어지면 start bit 가 시작된 것
                 IDLE:  if (rx_sync1 == 1'b0) state <= START;
 
-                // start bit 의 가운데에서 다시 확인한다.
+                // start bit 의 가운데(tick 8개 뒤)에서 다시 확인한다.
                 // 아직 0이면 진짜 start bit, 1이면 잡음이므로 무시한다.
                 START: if (bit_done) state <= (rx_sync1 == 1'b0) ? DATA : IDLE;
 
-                // 1비트 시간마다 한 번씩 읽는다. 그러면 항상 비트의 가운데이다.
+                // tick 16개마다 한 번씩 읽는다. 그러면 항상 비트의 가운데이다.
                 DATA:  if (bit_done && bit_idx == 3'd7) state <= STOP;
 
                 // stop bit 의 가운데까지 기다린다. (stop bit 값은 검사하지 않는다)
@@ -76,12 +70,13 @@ module uart_rx #(
         end
     end
 
-    // ---- 카운터 ----
-    // IDLE 에서 매 클럭 덮어쓰므로 리셋 없는 DFF 를 쓴다.
+    // ---- tick 카운터 ----
+    // IDLE 에서 8을 넣어 두면 START 에서는 tick 8개(8~15) 뒤에 bit_done 이 뜬다.
+    // 15 다음에는 저절로 0이 되므로, 그 뒤로는 tick 16개마다 bit_done 이 뜬다.
+    // IDLE 에서 매 클럭 덮어쓰므로 리셋이 필요 없다.
     always @(posedge clk) begin
-        if (state == IDLE) cnt <= HALF_START;
-        else if (bit_done) cnt <= 0;
-        else               cnt <= cnt + 1'b1;
+        if (state == IDLE) tcnt <= 4'd8;
+        else if (tick)     tcnt <= tcnt + 1'b1;
     end
 
     // ---- 데이터, 비트 번호 ----

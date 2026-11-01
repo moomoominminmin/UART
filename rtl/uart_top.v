@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 // UART 최상위 모듈
-//   uart_tx 와 uart_rx 를 하나로 묶었다. (FIFO 없음)
+//   uart_tick(공용 프리스케일러), uart_tx, uart_rx 를 하나로 묶었다. (FIFO 없음)
 //
 //   보내기 : tx_busy=0 일 때 tx_start 를 1클럭 주면서 tx_data 를 넣는다.
 //            tx_data 는 tx_busy 가 0이 될 때까지 바꾸지 않고 유지해야 한다.
@@ -27,24 +27,32 @@ module uart_top #(
     input  wire       rx
 );
 
-    uart_tx #(
+    // 공용 프리스케일러: tx 와 rx 가 같은 tick 을 쓴다 (1비트 = tick 16개)
+    wire tick;
+
+    uart_tick #(
         .CLK_FREQ (CLK_FREQ),
         .BAUD_RATE(BAUD_RATE)
-    ) u_tx (
+    ) u_tick (
+        .clk  (clk),
+        .rst_n(rst_n),
+        .tick (tick)
+    );
+
+    uart_tx u_tx (
         .clk     (clk),
         .rst_n   (rst_n),
+        .tick    (tick),
         .tx_start(tx_start),
         .tx_data (tx_data),
         .tx      (tx),
         .tx_busy (tx_busy)
     );
 
-    uart_rx #(
-        .CLK_FREQ (CLK_FREQ),
-        .BAUD_RATE(BAUD_RATE)
-    ) u_rx (
+    uart_rx u_rx (
         .clk    (clk),
         .rst_n  (rst_n),
+        .tick   (tick),
         .rx     (rx),
         .rx_data(rx_data),
         .rx_done(rx_done)
