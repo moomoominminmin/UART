@@ -4,6 +4,7 @@
 //   uart_tx 와 uart_rx 를 하나로 묶었다. (FIFO 없음)
 //
 //   보내기 : tx_busy=0 일 때 tx_start 를 1클럭 주면서 tx_data 를 넣는다.
+//            tx_data 는 tx_busy 가 0이 될 때까지 바꾸지 않고 유지해야 한다.
 //   받기   : 1바이트를 다 받으면 rx_done 이 1클럭 뜨고, 그 순간 rx_data 가 유효하다.
 module uart_top #(
     parameter CLK_FREQ  = 50_000_000,

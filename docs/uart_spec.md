@@ -12,7 +12,7 @@ FIFO와 별도의 보레이트 생성기 없이, 송신기와 수신기가 각�
 | 기본 클럭 / 보레이트 | 50 MHz / 115200 bps (파라미터로 변경 가능) |
 | 비트 타이밍 | `CLKS_PER_BIT = CLK_FREQ / BAUD_RATE` 클럭 (정수 나눗셈, 내림) |
 | RX 샘플링 | start 하강 엣지부터 카운터를 세어 비트 중앙에서 1회 샘플 |
-| 버퍼 | 없음 (TX 1바이트 래치, RX 1바이트 출력 레지스터) |
+| 버퍼 | 없음 (TX는 데이터를 저장하지 않음 → 전송 중 `tx_data` 유지 필요, RX 1바이트 출력 레지스터) |
 | 클럭 도메인 | 단일 클럭 (`clk`) |
 | 리셋 | 비동기, Active-Low (`rst_n`) |
 | 오류 검출 | 없음 (framing / parity / overrun 검출하지 않음) |
@@ -64,8 +64,8 @@ TX 경로와 RX 경로는 서로 독립적입니다. 두 모듈 모두 시스템
 |---|---|---|---|
 | `clk` | in | 1 | 시스템 클럭 |
 | `rst_n` | in | 1 | 비동기 리셋, Active-Low |
-| `tx_start` | in | 1 | **1클럭 펄스**. `tx_data`를 받아 전송 시작. `tx_busy`=1일 때는 사용 금지 (무시되지 않고 동작이 정의되지 않음) |
-| `tx_data` | in | 8 | 송신할 바이트. `tx_start`가 1인 클럭에 샘플됨 |
+| `tx_start` | in | 1 | **1클럭 펄스**. 전송 시작. `tx_busy`=1일 때는 사용 금지 (무시되지 않고 동작이 정의되지 않음) |
+| `tx_data` | in | 8 | 송신할 바이트. **`tx_start`부터 `tx_busy`가 0이 될 때까지 값을 유지해야 함** (내부에 저장하지 않고 비트마다 직접 읽음) |
 | `tx_busy` | out | 1 | 전송 중이면 1 (start bit 시작부터 stop bit 끝까지) |
 | `rx_data` | out | 8 | 수신한 바이트. **`rx_done`이 1인 클럭에만 유효** |
 | `rx_done` | out | 1 | **1클럭 펄스**. 1바이트 수신 완료 |
@@ -80,6 +80,7 @@ if (!tx_busy) begin tx_start <= 1; tx_data <= byte; end   // 1클럭 후 tx_star
 ```
 - `tx_busy`가 0일 때만 `tx_start`를 올립니다. 버퍼가 없으므로, 연속 전송하려면 `tx_busy`가 내려가길 기다린 뒤 다음 바이트를 넣어야 합니다.
 - `tx_start`를 올린 다음 클럭에 `tx_busy`가 1이 됩니다.
+- **`tx_busy`가 1인 동안 `tx_data`를 바꾸면 안 됩니다.** 바꾸면 그 뒤 비트들이 바뀐 값으로 나갑니다. 다음 바이트는 `tx_busy`가 0이 된 뒤에 넣습니다.
 
 **수신**
 ```
@@ -122,14 +123,15 @@ FSM: `IDLE → START → DATA(×8) → STOP → IDLE`
 
 | 상태 | 동작 |
 |---|---|
-| `IDLE` | `tx=1`. `tx_start`가 오면 `tx_data`를 `data_reg`에 래치, **즉시 `tx=0`(start bit)**, `START`로 |
-| `START` | start bit를 1비트 시간 유지. `bit_done`이면 `tx=data_reg[0]`, `bit_idx=0`, `DATA`로 |
+| `IDLE` | `tx=1`. `tx_start`가 오면 **즉시 `tx=0`(start bit)**, `START`로 |
+| `START` | start bit를 1비트 시간 유지. `bit_done`이면 `tx=tx_data[0]`, `bit_idx=0`, `DATA`로 |
 | `DATA` | 1비트 시간마다 다음 비트 출력 (bit1 → bit7, LSB first). bit7까지 끝나면 `tx=1`(stop bit), `STOP`으로 |
 | `STOP` | stop bit를 1비트 시간 유지. `bit_done`이면 `IDLE`로 |
 
 면적을 줄이기 위한 구조:
 - `tx_busy = (state != IDLE)` 조합 출력입니다. 레지스터를 따로 쓰지 않습니다.
-- 리셋 DFF는 `state`, `tx`만 씁니다. `cnt`는 IDLE 동안 매 클럭 0으로 지우고, `data_reg`와 `bit_idx`는 쓰기 전에 항상 새 값이 들어가므로 리셋 없는 DFF를 씁니다.
+- 보낼 데이터를 저장하는 레지스터가 없습니다. 비트마다 `tx_data[bit_idx]`를 직접 읽어 `tx` 레지스터에 넣으므로, 전송 중 `tx_data`를 유지해야 합니다. `tx`는 레지스터 출력이라 `tx_data`가 바뀌어도 글리치는 생기지 않습니다.
+- 리셋 DFF는 `state`, `tx`만 씁니다. `cnt`는 IDLE 동안 매 클럭 0으로 지우고, `bit_idx`는 쓰기 전에 항상 새 값이 들어가므로 리셋 없는 DFF를 씁니다.
 
 - 각 비트는 정확히 `CLKS_PER_BIT` 클럭 동안 유지됩니다.
 - `tx_start`를 받은 클럭의 다음 에지에서 바로 start bit가 나가므로 시작 지연이 없습니다.
@@ -191,11 +193,11 @@ sample           ▲          ▲          ▲                 ▲
 
 1. **`CLKS_PER_BIT ≥ 2` 필요**: `CLK_FREQ / BAUD_RATE < 2`이면 `$clog2`가 0이 되어 카운터 폭이 0이 됩니다.
    실제로는 RX가 비트 중앙을 잡으려면 `CLKS_PER_BIT`가 충분히 커야 하므로 최소 16 이상을 권장합니다.
-2. **버퍼 없음**: `tx_busy`일 때 `tx_start`를 주면 안 되고, `rx_done` 클럭에 `rx_data`를 못 받아 가면 데이터를 잃습니다.
+2. **버퍼 없음**: `tx_busy`일 때 `tx_start`를 주거나 `tx_data`를 바꾸면 안 되고, `rx_done` 클럭에 `rx_data`를 못 받아 가면 데이터를 잃습니다.
 3. **오류 미검출**: framing error, parity error, overrun 모두 검출하지 않습니다.
 4. **리셋**: `rst_n`은 비동기 assert / 비동기 deassert. 리셋 해제 동기화기는 포함되어 있지 않으므로,
    상위에서 동기화된 리셋을 넣어 주는 것을 권장합니다.
-   면적을 줄이기 위해 리셋 DFF는 TX `state`(2)·`tx`(1)와 RX `state`(2)만 쓰고, 나머지(`cnt`, `bit_idx`, 데이터 레지스터, 동기화기)는 리셋 없는 DFF입니다.
+   면적을 줄이기 위해 리셋 DFF는 TX `state`(2)·`tx`(1)와 RX `state`(2)만 쓰고, 나머지(`cnt`, `bit_idx`, RX `rx_data`, 동기화기)는 리셋 없는 DFF입니다.
    따라서 **리셋은 클럭이 도는 상태에서 2클럭 이상 유지**해야 합니다. 그 동안 리셋 없는 DFF가 정해진 값으로 채워집니다.
 5. **상태 플래그는 1클럭 펄스**: `rx_done`은 래치되지 않으므로 필요하면 상위에서 sticky 레지스터로 잡아야 합니다.
 
