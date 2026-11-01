@@ -23,8 +23,8 @@ FIFO와 별도의 보레이트 생성기 없이, 송신기와 수신기가 각�
 | 파일 | 설명 |
 |---|---|
 | [rtl/uart_top.v](../rtl/uart_top.v) | 최상위 모듈. `uart_tx`와 `uart_rx`를 연결만 함 |
-| [rtl/uart_tx.v](../rtl/uart_tx.v) | 송신기 (11비트 시프트 레지스터 + 비트 카운터) |
-| [rtl/uart_rx.v](../rtl/uart_rx.v) | 수신기 FSM (2-FF 동기화기, 비트 카운터, 마커 시프트 레지스터) |
+| [rtl/uart_tx.v](../rtl/uart_tx.v) | 송신기 FSM (비트 카운터 내장) |
+| [rtl/uart_rx.v](../rtl/uart_rx.v) | 수신기 FSM (2-FF 동기화기, 비트 카운터 내장) |
 | [tb/tb_uart_top.v](../tb/tb_uart_top.v) | loopback 테스트벤치 |
 
 ## 3. 블록 다이어그램
@@ -116,24 +116,20 @@ CLKS_PER_BIT = CLK_FREQ / BAUD_RATE        (정수 나눗셈, 내림)
 
 ### 5.2 `uart_tx` — 송신기
 
-DFF 수를 줄이기 위해 FSM, 비트 번호, `tx`/`tx_busy` 레지스터 없이 **11비트 시프트 레지스터 `shreg`** 하나로 프레임을 표현합니다.
-
-```
-shreg   = { 마커(1), ~stop(0), ~data[7:0], ~start(1) }   (마커를 뺀 프레임은 반전해서 저장)
-tx      = ~shreg[0]
-tx_busy = |shreg
-```
+FSM: `IDLE → START → DATA(×8) → STOP → IDLE`
 
 내부 카운터 `cnt`가 `0 ~ CLKS_PER_BIT-1`을 세고, `CLKS_PER_BIT-1`에 도달하면(`bit_done`) 다음 비트로 넘어갑니다.
 
-| 조건 | 동작 |
+| 상태 | 동작 |
 |---|---|
-| idle (`shreg==0`) | `tx=1`, `tx_busy=0`. `tx_start`가 오면 위 프레임을 `shreg`에 로드 → **다음 클럭부터 `tx=0`(start bit)**, `tx_busy=1` |
-| 전송 중, `bit_done` | `shreg`를 오른쪽으로 한 칸 시프트 (위에서 0 입력). 다음 비트가 `shreg[0]`으로 내려옴 (LSB first) |
-| stop bit 중 (`shreg[10:2]==0`, 마커가 `shreg[1]`) | `bit_done`이면 시프트 대신 `shreg=0`으로 클리어 → `tx_busy=0`, idle |
+| `IDLE` | `tx=1`. `tx_start`가 오면 `tx_data`를 `data_reg`에 래치, **즉시 `tx=0`(start bit)**, `START`로 |
+| `START` | start bit를 1비트 시간 유지. `bit_done`이면 `tx=data_reg[0]`, `bit_idx=0`, `DATA`로 |
+| `DATA` | 1비트 시간마다 다음 비트 출력 (bit1 → bit7, LSB first). bit7까지 끝나면 `tx=1`(stop bit), `STOP`으로 |
+| `STOP` | stop bit를 1비트 시간 유지. `bit_done`이면 `IDLE`로 |
 
-- `tx`는 플립플롭 출력에 인버터 하나만 거치므로 글리치가 없습니다.
-- `cnt`는 idle 동안 항상 0이므로 `tx_start` 때 따로 클리어하지 않습니다.
+면적을 줄이기 위한 구조:
+- `tx_busy = (state != IDLE)` 조합 출력입니다. 레지스터를 따로 쓰지 않습니다.
+- 리셋 DFF는 `state`, `tx`만 씁니다. `cnt`는 IDLE 동안 매 클럭 0으로 지우고, `data_reg`와 `bit_idx`는 쓰기 전에 항상 새 값이 들어가므로 리셋 없는 DFF를 씁니다.
 
 - 각 비트는 정확히 `CLKS_PER_BIT` 클럭 동안 유지됩니다.
 - `tx_start`를 받은 클럭의 다음 에지에서 바로 start bit가 나가므로 시작 지연이 없습니다.
@@ -148,21 +144,20 @@ tx_busy  ___/‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾�
 ### 5.3 `uart_rx` — 수신기
 
 **입력 동기화**: `rx`는 `clk`와 무관한 비동기 입력이므로 메타스테이블(metastability) 위험이 있습니다.
-`rx_sync0` → `rx_sync1` 2-FF 동기화기를 거치고, FSM은 반드시 `rx_sync1`만 참조합니다. 리셋 값은 `1`(idle)입니다.
+`rx_sync0` → `rx_sync1` 2-FF 동기화기를 거치고, FSM은 반드시 `rx_sync1`만 참조합니다. 리셋 없는 DFF이며, 리셋이 걸려 있는 2클럭 동안 `rx` 값으로 채워집니다.
 
 FSM: `IDLE → START → DATA(×8) → STOP → IDLE`
 
 | 상태 | 동작 |
 |---|---|
 | `IDLE` | `cnt=CLKS_PER_BIT-CLKS_PER_BIT/2`. `rx_sync1==0` (하강 엣지) 감지 시 `START`로 |
-| `START` | 반 비트 시간(`CLKS_PER_BIT/2`) 후 = start bit 중앙에서 재확인. 여전히 `0`이면 `cnt=0`으로 리셋하고 `DATA`로, `1`이면 글리치로 판단하고 `IDLE`로 복귀. 이때 `shreg`에 마커 `9'b1_0000_0000`을 로드 |
-| `DATA` | 1비트 시간(`CLKS_PER_BIT`)마다 = 각 비트 중앙에서 `rx_sync1`을 `shreg` 맨 위로 시프트 입력. 마커가 `shreg[1]`에 있을 때 받은 비트(bit7) 후 `STOP`으로 |
+| `START` | 반 비트 시간(`CLKS_PER_BIT/2`) 후 = start bit 중앙에서 재확인. 여전히 `0`이면 `cnt=0`, `bit_idx=0`으로 하고 `DATA`로, `1`이면 글리치로 판단하고 `IDLE`로 복귀 |
+| `DATA` | 1비트 시간(`CLKS_PER_BIT`)마다 = 각 비트 중앙에서 `rx_sync1`을 `rx_data[bit_idx]`에 저장. bit7 후 `STOP`으로 |
 | `STOP` | 1비트 시간 후 = stop bit 중앙에서 `rx_done` 1클럭 펄스, `IDLE`로. stop bit 값은 검사하지 않음 |
 
-DFF 수를 줄이기 위한 구조:
-- 비교기는 `bit_done`(`cnt==CLKS_PER_BIT-1`) 하나만 씁니다. `START`의 반 비트는 카운터를 중간값부터 세어서 만듭니다.
-- 비트 번호 레지스터 대신 9비트 `shreg`의 마커로 8비트를 셉니다. 8비트를 받으면 마커가 `shreg[0]`에 도착하고, `rx_data = shreg[8:1]`에 LSB 순서대로 놓입니다.
-- `shreg`는 데이터 전용이라 리셋하지 않습니다. 리셋 직후 첫 수신 전까지 `rx_data`는 X입니다.
+면적을 줄이기 위한 구조:
+- 비교기는 `bit_done`(`cnt==CLKS_PER_BIT-1`) 하나만 씁니다. `START`의 반 비트는 카운터를 중간값 `HALF_START`부터 세어서 만듭니다.
+- 리셋 DFF는 `state`만 씁니다. `cnt`는 IDLE에서 매 클럭 `HALF_START`로 덮어쓰고, `rx_data`와 `bit_idx`는 쓰기 전에 항상 새 값이 들어가므로 리셋 없는 DFF를 씁니다. 리셋 직후 첫 수신 전까지 `rx_data`는 X입니다.
 - `rx_done = (state==STOP) && bit_done` 조합 출력입니다. 같은 `clk`로 동작하는 로직에서 받아야 합니다.
 
 **샘플링 타이밍**
@@ -200,6 +195,8 @@ sample           ▲          ▲          ▲                 ▲
 3. **오류 미검출**: framing error, parity error, overrun 모두 검출하지 않습니다.
 4. **리셋**: `rst_n`은 비동기 assert / 비동기 deassert. 리셋 해제 동기화기는 포함되어 있지 않으므로,
    상위에서 동기화된 리셋을 넣어 주는 것을 권장합니다.
+   면적을 줄이기 위해 리셋 DFF는 TX `state`(2)·`tx`(1)와 RX `state`(2)만 쓰고, 나머지(`cnt`, `bit_idx`, 데이터 레지스터, 동기화기)는 리셋 없는 DFF입니다.
+   따라서 **리셋은 클럭이 도는 상태에서 2클럭 이상 유지**해야 합니다. 그 동안 리셋 없는 DFF가 정해진 값으로 채워집니다.
 5. **상태 플래그는 1클럭 펄스**: `rx_done`은 래치되지 않으므로 필요하면 상위에서 sticky 레지스터로 잡아야 합니다.
 
 ## 8. 검증

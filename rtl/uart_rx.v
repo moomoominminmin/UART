@@ -6,10 +6,10 @@
 //
 //   상태 흐름:  IDLE -> START -> DATA(8번) -> STOP -> IDLE
 //
-//   면적(DFF 수)을 줄이기 위해
-//     - 비트 번호(bit_idx) 대신 시프트 레지스터 안의 "마커" 비트로 8비트를 셌다.
+//   면적을 줄이기 위해
 //     - rx_done 은 레지스터 없이 (STOP && bit_done) 로 바로 만든다.
 //     - 비교기는 bit_done 하나만 쓴다. (START 에서는 카운터를 중간값부터 시작)
+//     - 리셋이 꼭 필요한 state 만 리셋하고, 나머지는 리셋 없는 DFF 를 쓴다. (더 작다)
 module uart_rx #(
     parameter CLK_FREQ  = 50_000_000,
     parameter BAUD_RATE = 115200
@@ -19,7 +19,7 @@ module uart_rx #(
 
     input  wire       rx,            // 시리얼 입력 (쉬는 동안 1), clk 와 비동기
 
-    output wire [7:0] rx_data,       // 수신한 데이터 (rx_done 일 때 유효)
+    output reg  [7:0] rx_data,       // 수신한 데이터 (rx_done 일 때 유효)
     output wire       rx_done        // 1클럭 펄스: 1바이트 수신 완료
 );
 
@@ -45,12 +45,11 @@ module uart_rx #(
     // 이후로는 rx 대신 항상 rx_sync1 만 사용한다.
 
     reg [1:0]       state;
-    reg [CNT_W-1:0] cnt;    // clk 를 세는 카운터
-    reg [8:0]       shreg;  // { 받은 데이터 8비트, 마커 } : 위에서 밀어 넣는다
+    reg [CNT_W-1:0] cnt;      // clk 를 세는 카운터
+    reg [2:0]       bit_idx;  // 지금 받는 데이터 비트 번호 (0 ~ 7)
 
     wire bit_done = (cnt == CLKS_PER_BIT - 1);  // 1비트 시간이 지났다
 
-    assign rx_data = shreg[8:1];
     assign rx_done = (state == STOP) && bit_done;
 
     // ---- 상태 ----
@@ -68,8 +67,7 @@ module uart_rx #(
                 START: if (bit_done) state <= (rx_sync1 == 1'b0) ? DATA : IDLE;
 
                 // 1비트 시간마다 한 번씩 읽는다. 그러면 항상 비트의 가운데이다.
-                // 마커가 shreg[1] 에 있으면 지금 읽는 것이 마지막(8번째) 비트이다.
-                DATA:  if (bit_done && shreg[1]) state <= STOP;
+                DATA:  if (bit_done && bit_idx == 3'd7) state <= STOP;
 
                 // stop bit 의 가운데까지 기다린다. (stop bit 값은 검사하지 않는다)
                 // 이 상태에서 bit_done 인 클럭이 곧 rx_done 이다.
@@ -80,23 +78,21 @@ module uart_rx #(
 
     // ---- 카운터 ----
     // IDLE 에서 매 클럭 덮어쓰므로 리셋 없는 DFF 를 쓴다.
-    // (리셋 중에는 state=IDLE 이므로 클럭이 돌면 이미 HALF_START 가 들어가 있다)
     always @(posedge clk) begin
         if (state == IDLE) cnt <= HALF_START;
         else if (bit_done) cnt <= 0;
         else               cnt <= cnt + 1'b1;
     end
 
-    // ---- 데이터 시프트 레지스터 ----
-    // 데이터만 담는 레지스터라서 리셋이 필요 없다. (리셋 없는 DFF 가 더 작다)
-    // START 끝에서 마커를 맨 위에 넣고, 데이터가 하나 들어올 때마다 한 칸씩 내려간다.
-    // 8개를 받으면 마커가 shreg[0] 에 도착하고 데이터는 shreg[8:1] 에 LSB 순서대로 놓인다.
+    // ---- 데이터, 비트 번호 ----
+    // 쓰기 전에 항상 새 값이 들어가므로 리셋이 필요 없다.
+    // (리셋 직후 첫 수신 전까지 rx_data 는 X 이다. rx_done 일 때만 유효하므로 문제 없음)
     always @(posedge clk) begin
-        if (bit_done) begin
-            if (state == START)
-                shreg <= 9'b1_0000_0000;
-            else if (state == DATA)
-                shreg <= {rx_sync1, shreg[8:1]};
+        if (state == START) begin
+            bit_idx <= 3'd0;
+        end else if (state == DATA && bit_done) begin
+            rx_data[bit_idx] <= rx_sync1;
+            bit_idx          <= bit_idx + 1'b1;
         end
     end
 
