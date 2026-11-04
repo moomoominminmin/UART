@@ -7,8 +7,8 @@
 //            tx_data 는 tx_busy 가 0이 될 때까지 바꾸지 않고 유지해야 한다.
 //   받기   : 1바이트를 다 받으면 rx_done 이 1클럭 뜨고, 그 순간 rx_data 가 유효하다.
 module uart_top #(
-    parameter CLK_FREQ  = 50_000_000,
-    parameter BAUD_RATE = 115200
+    parameter CLK_FREQ  = 10_000_000,
+    parameter BAUD_RATE = 9600
 ) (
     input  wire       clk,
     input  wire       rst_n,        // 비동기 리셋, 0 이면 리셋

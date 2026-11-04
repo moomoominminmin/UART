@@ -2,11 +2,11 @@
 
 // UART 공용 프리스케일러
 //   clk 를 PRE_DIV 번 셀 때마다 tick 을 1클럭 낸다.
-//   1비트 = tick 16개 가 되도록 PRE_DIV 를 정한다. (50MHz / 115200bps 이면 PRE_DIV = 27)
+//   1비트 = tick 16개 가 되도록 PRE_DIV 를 정한다. (10MHz / 9600bps 이면 PRE_DIV = 65)
 //   uart_tx 와 uart_rx 가 같이 쓴다.
 module uart_tick #(
-    parameter CLK_FREQ  = 50_000_000,
-    parameter BAUD_RATE = 115200
+    parameter CLK_FREQ  = 10_000_000,
+    parameter BAUD_RATE = 9600
 ) (
     input  wire clk,
     input  wire rst_n,

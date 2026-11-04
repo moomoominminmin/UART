@@ -2,7 +2,7 @@
 
 // loopback 테스트: tx 를 rx 에 연결하고 여러 바이트를 보내서 그대로 돌아오는지 확인
 //   합성 후 netlist 에도 그대로 쓸 수 있게 DUT 의 포트만 사용하고 파라미터는 덮어쓰지 않는다.
-//   (기본값 50MHz / 115200bps 기준) 합성 후에는 아래 "uart_top dut (" 의 모듈 이름만 바꾸면 된다.
+//   (기본값 10MHz / 9600bps 기준) 합성 후에는 아래 "uart_top dut (" 의 모듈 이름만 바꾸면 된다.
 module tb_uart_top;
 
     reg      clk = 0;
@@ -21,7 +21,7 @@ module tb_uart_top;
         .tx(line), .rx(line)
     );
 
-    always #10 clk = ~clk;  // 50MHz (uart_top 기본 CLK_FREQ 와 일치해야 함)
+    always #50 clk = ~clk;  // 10MHz (uart_top 기본 CLK_FREQ 와 일치해야 함)
 
     reg [7:0] expected [0:3];
     integer   rx_cnt = 0;
@@ -68,7 +68,7 @@ module tb_uart_top;
 
     // 안전장치
     initial begin
-        #5_000_000;
+        #10_000_000;
         $display("TIMEOUT");
         $finish;
     end
