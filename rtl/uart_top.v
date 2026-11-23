@@ -1,16 +1,17 @@
 `timescale 1ns / 1ps
 
 // UART 최상위 모듈
-//   uart_tick(공용 프리스케일러), uart_tx, uart_rx 를 하나로 묶었다. (FIFO 없음)
+//   100MHz 클럭 기준, 1비트 = 5클럭 (20Mbps). uart_tx, uart_rx 를 하나로 묶었다. (FIFO 없음)
+//   tx 와 rx 는 각자 5 카운터를 가진다. (rx 는 start bit 에 맞춰 카운터를 시작해야 하므로)
 //
 //   보내기 : tx_busy=0 일 때 tx_start 를 1클럭 주면서 tx_data 를 넣는다.
 //            tx_data 는 tx_busy 가 0이 될 때까지 바꾸지 않고 유지해야 한다.
 //   받기   : 1바이트를 다 받으면 rx_done 이 1클럭 뜨고, 그 순간 rx_data 가 유효하다.
 module uart_top #(
-    parameter CLK_FREQ  = 10_000_000,
-    parameter BAUD_RATE = 9600
+    parameter CLKS_PER_BIT = 5,     // 100MHz / 5 = 20Mbps
+    parameter SAMPLE_POINT = 2      // rx 가 각 비트의 3번째 클럭에서 읽음
 ) (
-    input  wire       clk,
+    input  wire       clk,          // 100MHz
     input  wire       rst_n,        // 비동기 리셋, 0 이면 리셋
 
     // 보내기
@@ -27,32 +28,23 @@ module uart_top #(
     input  wire       rx
 );
 
-    // 공용 프리스케일러: tx 와 rx 가 같은 tick 을 쓴다 (1비트 = tick 16개)
-    wire tick;
-
-    uart_tick #(
-        .CLK_FREQ (CLK_FREQ),
-        .BAUD_RATE(BAUD_RATE)
-    ) u_tick (
-        .clk  (clk),
-        .rst_n(rst_n),
-        .tick (tick)
-    );
-
-    uart_tx u_tx (
+    uart_tx #(
+        .CLKS_PER_BIT(CLKS_PER_BIT)
+    ) u_tx (
         .clk     (clk),
         .rst_n   (rst_n),
-        .tick    (tick),
         .tx_start(tx_start),
         .tx_data (tx_data),
         .tx      (tx),
         .tx_busy (tx_busy)
     );
 
-    uart_rx u_rx (
+    uart_rx #(
+        .CLKS_PER_BIT(CLKS_PER_BIT),
+        .SAMPLE_POINT(SAMPLE_POINT)
+    ) u_rx (
         .clk    (clk),
         .rst_n  (rst_n),
-        .tick   (tick),
         .rx     (rx),
         .rx_data(rx_data),
         .rx_done(rx_done)
