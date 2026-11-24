@@ -1,0 +1,104 @@
+# =====================================================================
+#  via_fill.tcl : 링 메탈(45도 꺾인 L자 포함) 안에 VIA1, VIA2를 자동으로 채우기
+#  - 메탈 polygon 꼭짓점을 넣으면, via + 여유(enclosure)가 메탈 안에
+#    완전히 들어가는 자리에만 via를 찍는다.
+#  - 45도 구간도 자동으로 걸러진다.
+# =====================================================================
+
+# ---------- 1. 규칙 값 (ETRI DRC 문서 값으로 바꾸기) ----------
+set VIA_SIZE   0.8    ;# via 한 변 길이 (um)
+set VIA_SPACE  2.4    ;# 같은 via끼리 간격 (um), 기존 레이아웃 실측값
+set ENC        1.0    ;# 메탈 끝에서 via까지 최소 여유 (um), DRC 규칙 이상이면 됨
+set GRID       0.01   ;# manufacturing grid (LEF에 0.01로 나옴)
+set STAGGER    1      ;# 1 = VIA2를 VIA1과 반 칸 엇갈리게 (지금 레이아웃처럼), 0 = 같은 자리
+set V1_LAYER   "VIA1" ;# 레이어 팔레트 이름에서 :drawing 앞부분
+set V2_LAYER   "VIA2"
+set DRY_RUN    1      ;# 1 = 좌표만 출력하고 개수 확인, 0 = 실제로 그리기
+
+# ---------- 2. 링 메탈 꼭짓점 (Edit Object > Polygon 탭 값) ----------
+# 한 줄에 polygon 하나, x y x y ... 순서. 링이 2개면 2줄.
+set RINGS {
+    {251.5 0  87.6 0  0 87.6  0 251.5  29.57 251.5  29.57 99.93  99.93 29.57  251.5 29.57}
+    {251.5 48.45  135.25 48.45  48.45 135.25  48.45 251.5  78 251.5  78 147.6  147.6 78  251.5 78}
+}
+
+# ---------- 3. L-Edit에 사각형 그리기 (dbs create rect) ----------
+# 실행 전에 via를 넣을 셀 창을 열어 두기. 지금 열린 창이 대상이 됨
+proc make_box {layer x1 y1 x2 y2} {
+    set cv [dbs get topCellView]
+    dbs create rect -design $cv -lpp [list $layer drawing] \
+        -box [list [list $x1 $y1] [list $x2 $y2]]
+}
+
+# =====================================================================
+#  아래는 수정할 필요 없음
+# =====================================================================
+set EPS 1e-6
+
+proc snap {v} {
+    return [format "%.3f" [expr {round($v / $::GRID) * $::GRID}]]
+}
+
+# 점이 polygon 안에 있는지 (ray casting)
+proc pip {px py pts} {
+    set n [expr {[llength $pts] / 2}]
+    set inside 0
+    set j [expr {$n - 1}]
+    for {set i 0} {$i < $n} {incr i} {
+        set xi [lindex $pts [expr {2*$i}]];   set yi [lindex $pts [expr {2*$i+1}]]
+        set xj [lindex $pts [expr {2*$j}]];   set yj [lindex $pts [expr {2*$j+1}]]
+        if {(($yi > $py) != ($yj > $py)) &&
+            ($px < ($xj - $xi) * ($py - $yi) / double($yj - $yi) + $xi)} {
+            set inside [expr {!$inside}]
+        }
+        set j $i
+    }
+    return $inside
+}
+
+# 사각형(via + 여유)이 polygon 안에 완전히 들어가는지
+proc rect_inside {x1 y1 x2 y2 pts} {
+    set e $::EPS
+    foreach {cx cy} [list [expr {$x1+$e}] [expr {$y1+$e}] [expr {$x2-$e}] [expr {$y1+$e}] \
+                          [expr {$x2-$e}] [expr {$y2-$e}] [expr {$x1+$e}] [expr {$y2-$e}]] {
+        if {![pip $cx $cy $pts]} { return 0 }
+    }
+    # 안쪽으로 꺾인 모서리가 사각형을 파고드는 경우 제외
+    foreach {vx vy} $pts {
+        if {$vx > $x1 + $e && $vx < $x2 - $e && $vy > $y1 + $e && $vy < $y2 - $e} { return 0 }
+    }
+    return 1
+}
+
+proc fill_poly {pts layer offset} {
+    set s $::VIA_SIZE;  set enc $::ENC
+    set pitch [expr {$::VIA_SIZE + $::VIA_SPACE}]
+    set xs {}; set ys {}
+    foreach {x y} $pts { lappend xs $x; lappend ys $y }
+    set minx [tcl::mathfunc::min {*}$xs];  set maxx [tcl::mathfunc::max {*}$xs]
+    set miny [tcl::mathfunc::min {*}$ys];  set maxy [tcl::mathfunc::max {*}$ys]
+    set count 0
+    for {set y [expr {$miny + $enc + $offset}]} {$y + $s + $enc <= $maxy + $::EPS} {set y [expr {$y + $pitch}]} {
+        for {set x [expr {$minx + $enc + $offset}]} {$x + $s + $enc <= $maxx + $::EPS} {set x [expr {$x + $pitch}]} {
+            if {[rect_inside [expr {$x-$enc}] [expr {$y-$enc}] [expr {$x+$s+$enc}] [expr {$y+$s+$enc}] $pts]} {
+                set x1 [snap $x]; set y1 [snap $y]
+                set x2 [snap [expr {$x + $s}]]; set y2 [snap [expr {$y + $s}]]
+                if {$::DRY_RUN} {
+                    puts "$layer  $x1 $y1 $x2 $y2"
+                } else {
+                    make_box $layer $x1 $y1 $x2 $y2
+                }
+                incr count
+            }
+        }
+    }
+    return $count
+}
+
+set off2 [expr {$STAGGER ? ($VIA_SIZE + $VIA_SPACE) / 2.0 : 0.0}]
+set n1 0; set n2 0
+foreach poly $RINGS {
+    incr n1 [fill_poly $poly $V1_LAYER 0.0]
+    incr n2 [fill_poly $poly $V2_LAYER $off2]
+}
+puts "완료: $V1_LAYER $n1 개, $V2_LAYER $n2 개"
