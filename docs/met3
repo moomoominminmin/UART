@@ -1,0 +1,25 @@
+# strips.tcl
+# Draw two horizontal metal strips:
+#   strip 1 : y = Y0 ~ Y0+H
+#   gap     : GAP
+#   strip 2 : next H
+# Usage after loading:
+#   tsk_strips x1 x2
+#   tsk_strips x1 x2 Y0 H GAP LAYER
+
+proc tsk_snap {v} {
+    return [format "%.3f" [expr {floor($v / 0.01 + 0.5) * 0.01}]]
+}
+
+proc tsk_strips {x1 x2 {y0 91.5} {h 29.6} {gap 18.7} {layer MET3}} {
+    set cv [dbs get topCellView]
+    set ya1 [tsk_snap $y0]
+    set ya2 [tsk_snap [expr {$y0 + $h}]]
+    set yb1 [tsk_snap [expr {$y0 + $h + $gap}]]
+    set yb2 [tsk_snap [expr {$y0 + 2*$h + $gap}]]
+    set x1 [tsk_snap $x1]
+    set x2 [tsk_snap $x2]
+    dbs create rect -design $cv -lpp [list $layer drawing] -box [list [list $x1 $ya1] [list $x2 $ya2]]
+    dbs create rect -design $cv -lpp [list $layer drawing] -box [list [list $x1 $yb1] [list $x2 $yb2]]
+    puts "$layer : ($x1 $ya1)-($x2 $ya2)  and  ($x1 $yb1)-($x2 $yb2)"
+}
